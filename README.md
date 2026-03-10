@@ -1,17 +1,31 @@
-# sky_map
+# Sky map
 
-A new Flutter project.
+Flutter-додаток, який показує об'єкти нічного неба на чорному полотні з оновленням у реальному часі (10 Гц).
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+- **Керування станом через Provider** (`SkyMapProvider`).
+- Використання:
+  - GPS через `geolocator`.
+  - `accelerometer` та `magnetometer` через `sensors_plus`.
+- Перерахунок положень об'єктів **кожні 100 мс**.
+- Дані про планети/масу/гравітацію завантажуються з публічного API:
+  - `https://api.le-systeme-solaire.net/rest/bodies/`
+- На полотні відображаються:
+  - Сонце
+  - Місяць
+  - Усі планети Сонячної системи (Mercury..Neptune)
+  - 3 сузір'я (Orion, Ursa Major, Cassiopeia) лініями
+- По натисканню на об'єкт показується короткий опис в нижній панелі.
 
-A few resources to get you started if this is your first Flutter project:
+## Запуск
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Примітки
+
+- Для Android/iOS потрібно дозволити доступ до геолокації на рівні платформи.
+- Обчислення координат — наближені (освітній рівень), але дають коректну динаміку руху неба при зміні часу/орієнтації.
