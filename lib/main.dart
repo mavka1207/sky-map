@@ -323,14 +323,17 @@ void _buildBaseCatalog() {
 
     final relAz = ((azimuth - phoneAzimuth + 540) % 360) - 180;
     final relAlt = altitude - phonePitch;
-    if (relAz.abs() > 60 || relAlt.abs() > 50) {
-      return null;
-    }
+    const azimuthFov = 120.0; 
+    const altitudeFov = 80.0; 
 
-    const w = 400.0;
-    const h = 700.0;
-    final x = w / 2 + (relAz / 60) * (w / 2);
-    final y = h / 2 - (relAlt / 50) * (h / 2);
+if (relAz.abs() > azimuthFov || relAlt.abs() > altitudeFov) {
+  return null;
+}
+
+const w = 400.0;
+const h = 700.0;
+final x = w / 2 + (relAz / azimuthFov) * (w / 2);
+final y = h / 2 - (relAlt / altitudeFov) * (h / 2);
     return Offset(x, y);
   }
 
@@ -353,7 +356,7 @@ void _buildBaseCatalog() {
 
   void onTap(Offset tap) {
     for (final object in _visibleObjects) {
-      if ((object.offset - tap).distance < 20) {
+      if ((object.offset - tap).distance < 30) {
         selectedObject = object;
         notifyListeners();
         return;
@@ -391,6 +394,18 @@ class SkyPainter extends CustomPainter {
     for (final item in objects) {
       final paint = Paint()..color = item.object.color;
       canvas.drawCircle(_scale(item.offset, size), item.radius, paint);
+      final textPainter = TextPainter(
+  text: TextSpan(
+    text: item.object.name,
+    style: const TextStyle(color: Colors.white70, fontSize: 10),
+  ),
+  textDirection: TextDirection.ltr,
+)..layout();
+
+textPainter.paint(
+  canvas,
+  _scale(item.offset, size) + const Offset(6, -6),
+);
     }
   }
 
