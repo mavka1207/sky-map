@@ -53,16 +53,24 @@ class SkyMapPage extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: GestureDetector(
-              onTapUp: (details) => provider.onTap(details.localPosition),
-              child: CustomPaint(
-                painter: SkyPainter(
-                  provider.visibleObjects,
-                  provider.constellationLines,
-                  provider.selectedObject?.name,
-                ),
-                child: Container(),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final size = Size(constraints.maxWidth, constraints.maxHeight);
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (details) =>
+                      provider.onTap(details.localPosition, size),
+                  child: CustomPaint(
+                    painter: SkyPainter(
+                      provider.visibleObjects,
+                      provider.constellationLines,
+                      provider.selectedObject?.name,
+                      backgroundStars: provider.backgroundStars,
+                    ),
+                    child: Container(),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -107,6 +115,7 @@ class SkyMapProvider extends ChangeNotifier {
   final List<CelestialObject> _catalog = [];
   final List<RenderedObject> _visibleObjects = [];
   final List<LineSegment> _constellationLines = [];
+  final List<BackgroundStar> _backgroundStars = [];
 
   late final double _baseJulian;
   double? _lastSunAz;
@@ -121,10 +130,13 @@ class SkyMapProvider extends ChangeNotifier {
   List<LineSegment> get constellationLines =>
       List.unmodifiable(_constellationLines);
 
+  List<BackgroundStar> get backgroundStars =>
+      List.unmodifiable(_backgroundStars);
+
   String get statusLine {
     final position = _position;
     if (position == null) {
-      return 'Отримання GPS...';
+      return 'Determining location...';
     }
 
     if (_lastSunAz != null && _lastSunAlt != null) {
@@ -134,11 +146,12 @@ class SkyMapProvider extends ChangeNotifier {
           'alt ${_lastSunAlt!.toStringAsFixed(0)}° · 10 Гц';
     }
     return 'Lat ${position.latitude.toStringAsFixed(3)}, '
-        'Lon ${position.longitude.toStringAsFixed(3)} · Оновлення: 10 Гц';
+        'Lon ${position.longitude.toStringAsFixed(3)} · Unknown sun position · 10 Гц';
   }
 
   Future<void> initialize() async {
     _buildBaseCatalog();
+    _generateBackgroundStars();
     _baseJulian = _julianDate(DateTime.now().toUtc());
     await _loadPlanetDescriptions();
     await _setupLocation();
@@ -154,65 +167,65 @@ class SkyMapProvider extends ChangeNotifier {
       ..clear()
       ..addAll([
         CelestialObject(
-          name: 'Sun',
-          type: ObjectType.sun,
-          color: Colors.orangeAccent,
-          baseDescription: 'Наша зоря.',
-        ),
-        CelestialObject(
-          name: 'Moon',
-          type: ObjectType.moon,
-          color: Colors.blueGrey.shade100,
-          baseDescription: 'Природний супутник Землі.',
-        ),
-        CelestialObject(
-          name: 'Mercury',
-          type: ObjectType.planet,
-          color: Colors.grey,
-          baseDescription: 'Найближча планета до Сонця.',
-        ),
-        CelestialObject(
-          name: 'Venus',
-          type: ObjectType.planet,
-          color: Colors.amber.shade200,
-          baseDescription: 'Друга планета від Сонця.',
-        ),
-        CelestialObject(
-          name: 'Earth',
-          type: ObjectType.planet,
-          color: Colors.blue,
-          baseDescription: 'Наша планета.',
-        ),
-        CelestialObject(
-          name: 'Mars',
-          type: ObjectType.planet,
-          color: Colors.redAccent,
-          baseDescription: 'Червона планета.',
-        ),
-        CelestialObject(
-          name: 'Jupiter',
-          type: ObjectType.planet,
-          color: Colors.brown.shade200,
-          baseDescription: 'Найбільша планета.',
-        ),
-        CelestialObject(
-          name: 'Saturn',
-          type: ObjectType.planet,
-          color: Colors.yellow.shade300,
-          baseDescription: 'Планета з кільцями.',
-        ),
-        CelestialObject(
-          name: 'Uranus',
-          type: ObjectType.planet,
-          color: Colors.lightBlueAccent,
-          baseDescription: 'Крижаний гігант.',
-        ),
-        CelestialObject(
-          name: 'Neptune',
-          type: ObjectType.planet,
-          color: Colors.indigoAccent,
-          baseDescription: 'Найдальша планета.',
-        ),
+  name: 'Sun',
+  type: ObjectType.sun,
+  color: Colors.orangeAccent,
+  baseDescription: 'The Sun is the star at the center of our Solar System. It provides light and heat that make life on Earth possible and contains more than 99% of the total mass of the Solar System.',
+),
+CelestialObject(
+  name: 'Moon',
+  type: ObjectType.moon,
+  color: Colors.blueGrey.shade100,
+  baseDescription: 'The Moon is Earth’s only natural satellite. It influences ocean tides, stabilizes Earth’s rotation, and is the brightest object in the night sky after the Sun.',
+),
+CelestialObject(
+  name: 'Mercury',
+  type: ObjectType.planet,
+  color: Colors.grey,
+  baseDescription: 'Mercury is the closest planet to the Sun and the smallest planet in the Solar System. It has extreme temperature changes and almost no atmosphere.',
+),
+CelestialObject(
+  name: 'Venus',
+  type: ObjectType.planet,
+  color: Colors.amber.shade200,
+  baseDescription: 'Venus is the second planet from the Sun and is similar in size to Earth. It has a very thick atmosphere that traps heat, making it the hottest planet in the Solar System.',
+),
+CelestialObject(
+  name: 'Earth',
+  type: ObjectType.planet,
+  color: Colors.blue,
+  baseDescription: 'Earth is the third planet from the Sun and the only known planet to support life. About 71% of its surface is covered by water, and it has a protective atmosphere.',
+),
+CelestialObject(
+  name: 'Mars',
+  type: ObjectType.planet,
+  color: Colors.redAccent,
+  baseDescription: 'Mars is known as the Red Planet because of its reddish surface caused by iron oxide. Scientists study Mars to understand if life could have existed there in the past.',
+),
+CelestialObject(
+  name: 'Jupiter',
+  type: ObjectType.planet,
+  color: Colors.brown.shade200,
+  baseDescription: 'Jupiter is the largest planet in the Solar System. It is a gas giant known for its Great Red Spot, a massive storm that has lasted for centuries.',
+),
+CelestialObject(
+  name: 'Saturn',
+  type: ObjectType.planet,
+  color: Colors.yellow.shade300,
+  baseDescription: 'Saturn is famous for its spectacular ring system made of ice and rock particles. It is the second-largest planet and a gas giant.',
+),
+CelestialObject(
+  name: 'Uranus',
+  type: ObjectType.planet,
+  color: Colors.lightBlueAccent,
+  baseDescription: 'Uranus is an ice giant with a pale blue color caused by methane in its atmosphere. It rotates on its side compared to other planets.',
+),
+CelestialObject(
+  name: 'Neptune',
+  type: ObjectType.planet,
+  color: Colors.indigoAccent,
+  baseDescription: 'Neptune is the farthest known planet from the Sun. It is an ice giant famous for its strong winds and deep blue color.',
+),
       ]);
   }
 
@@ -572,16 +585,41 @@ class SkyMapProvider extends ChangeNotifier {
     return date.millisecondsSinceEpoch / 86400000.0 + 2440587.5;
   }
 
-  void onTap(Offset tap) {
+  void onTap(Offset tap, Size size) {
+    final tapXNorm = (tap.dx - size.width / 2) / (size.width / 2);
+    final tapYNorm = -(tap.dy - size.height / 2) / (size.height / 2);
+    final tapNorm = Offset(tapXNorm, tapYNorm);
+
     for (final object in _visibleObjects) {
-      if ((object.offset - tap).distance < 30) {
-        selectedObject = object;
-        notifyListeners();
-        return;
+    final dist = (object.offset - tapNorm).distance;
+    if (dist < 0.25) { // было 0.15
+      selectedObject = object;
+      notifyListeners();
+      return;
       }
     }
     selectedObject = null;
     notifyListeners();
+  }
+
+  void _generateBackgroundStars() {
+    final random = Random();
+    _backgroundStars.clear();
+    for (int i = 0; i < 200; i++) {
+      final x = random.nextDouble() * 2 - 1; // -1..1
+      final y = random.nextDouble() * 2 - 1; // -1..1
+
+      final radius = random.nextDouble() * 1.5 + 0.5;
+      final colors = [
+        Colors.white,
+        Colors.white70,
+        Colors.blueGrey.shade100,
+        Colors.amber.shade100,
+      ];
+      final color = colors[random.nextInt(colors.length)];
+
+      _backgroundStars.add(BackgroundStar(Offset(x, y), radius, color));
+    }
   }
 
   @override
@@ -591,21 +629,42 @@ class SkyMapProvider extends ChangeNotifier {
   }
 }
 
+class BackgroundStar {
+  final Offset position; // нормализованные координаты -1..1
+  final double radius;
+  final Color color;
+
+  BackgroundStar(this.position, this.radius, this.color);
+}
+
 class SkyPainter extends CustomPainter {
   final List<RenderedObject> objects;
   final List<LineSegment> constellationLines;
   final String? selectedObjectName;
+  final List<BackgroundStar> backgroundStars;
 
-  SkyPainter(this.objects, this.constellationLines, this.selectedObjectName);
+  SkyPainter(
+    this.objects,
+    this.constellationLines,
+    this.selectedObjectName, {
+    this.backgroundStars = const [],
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final background = Paint()..color = Colors.black;
     canvas.drawRect(Offset.zero & size, background);
 
+    // Фоновые звезды
+    final starPaint = Paint();
+    for (final star in backgroundStars) {
+      starPaint.color = star.color.withOpacity(0.9);
+      canvas.drawCircle(_scale(star.position, size), star.radius, starPaint);
+    }
+
     final linePaint = Paint()
-      ..color = Colors.white24
-      ..strokeWidth = 1;
+      ..color = Colors.white38
+      ..strokeWidth = 2;
     for (final line in constellationLines) {
       canvas.drawLine(
         _scale(line.start, size),
@@ -628,7 +687,10 @@ class SkyPainter extends CustomPainter {
         canvas.drawCircle(_scale(item.offset, size), radius + 4, glowPaint);
       }
 
-      canvas.drawCircle(_scale(item.offset, size), radius, paint);
+      final offset = item.object.name == 'Earth'
+          ? item.offset + const Offset(0.03, -0.03)
+          : item.offset;
+      canvas.drawCircle(_scale(offset, size), radius, paint);
       final textPainter = TextPainter(
         text: TextSpan(
           text: item.object.name,
@@ -639,7 +701,7 @@ class SkyPainter extends CustomPainter {
 
       textPainter.paint(
         canvas,
-        _scale(item.offset, size) + const Offset(6, -6),
+        _scale(offset, size) + const Offset(6, -6),
       );
     }
   }
@@ -654,7 +716,8 @@ class SkyPainter extends CustomPainter {
   bool shouldRepaint(covariant SkyPainter oldDelegate) =>
       oldDelegate.selectedObjectName != selectedObjectName ||
       oldDelegate.objects != objects ||
-      oldDelegate.constellationLines != constellationLines;
+      oldDelegate.constellationLines != constellationLines ||
+      oldDelegate.backgroundStars != backgroundStars;
 }
 
 enum ObjectType { sun, moon, planet }
