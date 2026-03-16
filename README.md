@@ -1,31 +1,31 @@
-# Sky map
+# Sky Map
 
-Flutter-додаток, який показує об'єкти нічного неба на чорному полотні з оновленням у реальному часі (10 Гц).
+A Flutter app that renders a simple real-time sky view on a black canvas (updates at ~10 Hz).
 
-## Getting Started
+## Features
 
-- **Керування станом через Provider** (`SkyMapProvider`).
-- Використання:
-  - GPS через `geolocator`.
-  - `accelerometer` та `magnetometer` через `sensors_plus`.
-- Перерахунок положень об'єктів **кожні 100 мс**.
-- Дані про планети/масу/гравітацію завантажуються з публічного API:
+- **State management**: `provider` (`SkyMapProvider`)
+- **Sensors & location**
+  - GPS via `geolocator`
+  - Accelerometer + magnetometer via `sensors_plus`
+- **Realtime updates**: object positions recalculated every ~100 ms
+- **Planet details**: mass/gravity fetched from a public API
   - `https://api.le-systeme-solaire.net/rest/bodies/`
-- На полотні відображаються:
-  - Сонце
-  - Місяць
-  - Усі планети Сонячної системи (Mercury..Neptune)
-  - 3 сузір'я (Orion, Ursa Major, Cassiopeia) лініями
-- По натисканню на об'єкт показується короткий опис в нижній панелі.
+- **Objects on the canvas**
+  - Sun
+  - Moon
+  - All Solar System planets (Mercury → Neptune)
+  - 3 constellations as line segments (Orion, Ursa Major, Cassiopeia)
+- **Interaction**: tap an object to open a bottom sheet with a short description
 
-## Запуск
+## Run
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-## Примітки
+## Notes
 
-- Для Android/iOS потрібно дозволити доступ до геолокації на рівні платформи.
-- Обчислення координат — наближені (освітній рівень), але дають коректну динаміку руху неба при зміні часу/орієнтації.
+- On Android/iOS you must grant location permissions at the platform level.
+- The sky/object coordinate calculations are approximate (educational level), but they provide a believable dynamic sky view that responds to time and device orientation.
