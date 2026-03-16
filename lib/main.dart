@@ -179,10 +179,10 @@ class SkyMapProvider extends ChangeNotifier {
       return 'Lat ${position.latitude.toStringAsFixed(3)}, '
           'Lon ${position.longitude.toStringAsFixed(3)} · '
           'Sun az ${_lastSunAz!.toStringAsFixed(0)}°, '
-          'alt ${_lastSunAlt!.toStringAsFixed(0)}° · 10 Гц';
+          'alt ${_lastSunAlt!.toStringAsFixed(0)}° · 10 Hz';
     }
     return 'Lat ${position.latitude.toStringAsFixed(3)}, '
-        'Lon ${position.longitude.toStringAsFixed(3)} · Unknown sun position · 10 Гц';
+        'Lon ${position.longitude.toStringAsFixed(3)} · Unknown sun position · 10 Hz';
   }
 
   Future<void> initialize() async {
