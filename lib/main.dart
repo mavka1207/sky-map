@@ -1,3 +1,9 @@
+// ============================================================================
+// SKY MAP - INTEGRATION OF ALL IMPROVEMENTS 
+// ============================================================================
+
+// ignore_for_file: avoid_print, deprecated_member_use, unused_element
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -8,6 +14,12 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
+import 'package:sky_map/error_handling/error_handling.dart';
+import 'package:sky_map/models/constellation_data.dart';
+import 'package:sky_map/models/hip_star_catalog.dart';
+import 'package:sky_map/models/orbital_mechanics.dart';
+import 'package:sky_map/themes/night_vision_theme.dart';
+
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -17,31 +29,65 @@ void main() {
   );
 }
 
-class SkyMapApp extends StatelessWidget {
+class SkyMapApp extends StatefulWidget {
   const SkyMapApp({super.key});
+
+  @override
+  State<SkyMapApp> createState() => _SkyMapAppState();
+}
+
+class _SkyMapAppState extends State<SkyMapApp> {
+  bool _nightVisionMode = false;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Sky Map',
-      theme: ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
-      home: const SkyMapPage(),
+      theme: _nightVisionMode
+          ? NightVisionTheme.getNightVisionTheme()
+          : ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
+      home: SkyMapPage(
+        nightVisionMode: _nightVisionMode,
+        onNightVisionChanged: (value) {
+          setState(() => _nightVisionMode = value);
+        },
+      ),
     );
   }
 }
 
 class SkyMapPage extends StatelessWidget {
-  const SkyMapPage({super.key});
+  final bool nightVisionMode;
+  final Function(bool) onNightVisionChanged;
+
+  const SkyMapPage({
+    super.key,
+    this.nightVisionMode = false,
+    required this.onNightVisionChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SkyMapProvider>();
+    final pendingError = provider.takePendingError();
+    if (pendingError != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ErrorDialogHelper.showErrorDialog(context, pendingError);
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.black,
         title: const Text('Sky Map'),
+        actions: [
+          IconButton(
+            icon: Icon(nightVisionMode ? Icons.dark_mode : Icons.light_mode),
+            onPressed: () => onNightVisionChanged(!nightVisionMode),
+            tooltip: 'Night Vision',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -104,7 +150,10 @@ class SkyMapPage extends StatelessWidget {
                               const SizedBox(height: 8),
                               Text(
                                 selected.description,
-                                style: const TextStyle(color: Colors.white70),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
                               ),
                             ],
                           ),
@@ -117,7 +166,8 @@ class SkyMapPage extends StatelessWidget {
                       provider.visibleObjects,
                       provider.constellationLines,
                       provider.selectedObject?.name,
-                      backgroundStars: provider.backgroundStars,
+                      hipStars: provider.visibleHipStars,
+                      nightVisionMode: nightVisionMode,
                     ),
                     child: Container(),
                   ),
@@ -131,6 +181,10 @@ class SkyMapPage extends StatelessWidget {
   }
 }
 
+// ============================================================================
+// SKY MAP PROVIDER - CORE LOGIC
+// ============================================================================
+
 class SkyMapProvider extends ChangeNotifier {
   static const _degToRad = pi / 180;
 
@@ -143,8 +197,8 @@ class SkyMapProvider extends ChangeNotifier {
 
   final List<CelestialObject> _catalog = [];
   final List<RenderedObject> _visibleObjects = [];
+  final List<RenderedStar> _visibleHipStars = [];
   final List<LineSegment> _constellationLines = [];
-  final List<BackgroundStar> _backgroundStars = [];
 
   late final double _baseJulian;
   double? _lastSunAz;
@@ -153,16 +207,18 @@ class SkyMapProvider extends ChangeNotifier {
   double _smoothPitch = 0;
 
   RenderedObject? selectedObject;
+  SkyMapException? _pendingError;
 
   List<RenderedObject> get visibleObjects => List.unmodifiable(_visibleObjects);
-
-  List<LineSegment> get constellationLines =>
-      List.unmodifiable(_constellationLines);
-
-  List<BackgroundStar> get backgroundStars =>
-      List.unmodifiable(_backgroundStars);
-
+  List<RenderedStar> get visibleHipStars => List.unmodifiable(_visibleHipStars);
+  List<LineSegment> get constellationLines => List.unmodifiable(_constellationLines);
   List<CelestialObject> get pickerObjects => _catalog;
+
+  SkyMapException? takePendingError() {
+    final err = _pendingError;
+    _pendingError = null;
+    return err;
+  }
 
   void setShowAllPlanets(bool value) {
     showAllPlanets = value;
@@ -187,15 +243,25 @@ class SkyMapProvider extends ChangeNotifier {
 
   Future<void> initialize() async {
     _buildBaseCatalog();
-    _generateBackgroundStars();
     _baseJulian = _julianDate(DateTime.now().toUtc());
     await _loadPlanetDescriptions();
+    await _initializeSensorsWithHandling();
     await _setupLocation();
     _listenSensors();
     _timer = Timer.periodic(
       const Duration(milliseconds: 100),
       (_) => _updateSky(),
     );
+  }
+
+  Future<void> _initializeSensorsWithHandling() async {
+    try {
+      await SensorErrorHandler.initializeSensorsWithErrorHandling();
+    } on SkyMapException catch (e) {
+      _pendingError = e;
+    } catch (_) {
+      // Ignore: sensors are optional; the provider will continue with smoothing.
+    }
   }
 
   void _buildBaseCatalog() {
@@ -206,71 +272,55 @@ class SkyMapProvider extends ChangeNotifier {
           name: 'Sun',
           type: ObjectType.sun,
           color: Colors.orangeAccent,
-          baseDescription:
-              'The Sun is the star at the center of our Solar System. It provides light and heat that make life on Earth possible and contains more than 99% of the total mass of the Solar System.',
+          baseDescription: 'The Sun is the star at the center of our Solar System.',
         ),
         CelestialObject(
           name: 'Moon',
           type: ObjectType.moon,
           color: Colors.blueGrey.shade100,
-          baseDescription:
-              'The Moon is Earth’s only natural satellite. It influences ocean tides, stabilizes Earth’s rotation, and is the brightest object in the night sky after the Sun.',
+          baseDescription: 'The Moon is Earth\'s only natural satellite.',
         ),
         CelestialObject(
           name: 'Mercury',
           type: ObjectType.planet,
           color: Colors.grey,
-          baseDescription:
-              'Mercury is the closest planet to the Sun and the smallest planet in the Solar System. It has extreme temperature changes and almost no atmosphere.',
+          baseDescription: 'Mercury is the closest planet to the Sun.',
         ),
         CelestialObject(
           name: 'Venus',
           type: ObjectType.planet,
           color: Colors.amber.shade200,
-          baseDescription:
-              'Venus is the second planet from the Sun and is similar in size to Earth. It has a very thick atmosphere that traps heat, making it the hottest planet in the Solar System.',
-        ),
-        CelestialObject(
-          name: 'Earth',
-          type: ObjectType.planet,
-          color: Colors.blue,
-          baseDescription:
-              'Earth is the third planet from the Sun and the only known planet to support life. About 71% of its surface is covered by water, and it has a protective atmosphere.',
+          baseDescription: 'Venus is the second planet from the Sun.',
         ),
         CelestialObject(
           name: 'Mars',
           type: ObjectType.planet,
           color: Colors.redAccent,
-          baseDescription:
-              'Mars is known as the Red Planet because of its reddish surface caused by iron oxide. Scientists study Mars to understand if life could have existed there in the past.',
+          baseDescription: 'Mars is known as the Red Planet.',
         ),
         CelestialObject(
           name: 'Jupiter',
           type: ObjectType.planet,
           color: Colors.brown.shade200,
-          baseDescription:
-              'Jupiter is the largest planet in the Solar System. It is a gas giant known for its Great Red Spot, a massive storm that has lasted for centuries.',
+          baseDescription: 'Jupiter is the largest planet in the Solar System.',
         ),
         CelestialObject(
           name: 'Saturn',
           type: ObjectType.planet,
           color: Colors.yellow.shade300,
-          baseDescription:
-              'Saturn is famous for its spectacular ring system made of ice and rock particles. It is the second-largest planet and a gas giant.',
+          baseDescription: 'Saturn is famous for its ring system.',
         ),
         CelestialObject(
           name: 'Uranus',
           type: ObjectType.planet,
           color: Colors.lightBlueAccent,
-          baseDescription:
-              'Uranus is an ice giant with a pale blue color caused by methane in its atmosphere. It rotates on its side compared to other planets.',
+          baseDescription: 'Uranus is an ice giant.',
         ),
         CelestialObject(
           name: 'Neptune',
           type: ObjectType.planet,
           color: Colors.indigoAccent,
-          baseDescription:
-              'Neptune is the farthest known planet from the Sun. It is an ice giant famous for its strong winds and deep blue color.',
+          baseDescription: 'Neptune is the farthest known planet.',
         ),
       ]);
   }
@@ -280,11 +330,11 @@ class SkyMapProvider extends ChangeNotifier {
       final response = await http.get(
         Uri.parse('https://api.le-systeme-solaire.net/rest/bodies/'),
       );
-      if (response.statusCode != 200) {
-        return;
-      }
+      if (response.statusCode != 200) return;
+
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final List<dynamic> bodies = decoded['bodies'] as List<dynamic>;
+
       for (final object in _catalog) {
         final matched = bodies
             .cast<Map<String, dynamic>?>()
@@ -295,48 +345,44 @@ class SkyMapProvider extends ChangeNotifier {
                   object.name.toLowerCase(),
               orElse: () => <String, dynamic>{},
             );
+
         if (matched.isNotEmpty) {
           final mass = (matched['mass']?['massValue'] ?? 'n/a').toString();
           final gravity = (matched['gravity'] ?? 'n/a').toString();
           object.description =
-              '${object.baseDescription} Маса: $mass; Гравітація: $gravity';
+              '${object.baseDescription} Mass: $mass; Gravity: $gravity';
         }
       }
-    } catch (_) {
-      // Keep fallback descriptions.
+    } catch (e) {
+      print('Error loading planet descriptions: $e');
     }
   }
 
   Future<void> _setupLocation() async {
-    final enabled = await Geolocator.isLocationServiceEnabled();
-    if (!enabled) {
-      return;
+    try {
+      _position = await LocationErrorHandler.getPositionWithErrorHandling();
+      if (_position == null) return;
+      LocationErrorHandler.getPositionStreamWithErrorHandling().listen((p) {
+        _position = p;
+      });
+    } on SkyMapException catch (e) {
+      _pendingError = e;
+    } catch (e) {
+      print('Location setup error: $e');
     }
-
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-    if (permission == LocationPermission.deniedForever ||
-        permission == LocationPermission.denied) {
-      return;
-    }
-
-    _position = await Geolocator.getCurrentPosition();
-    Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-    ).listen((p) {
-      _position = p;
-    });
   }
 
   void _listenSensors() {
-    accelerometerEventStream().listen((event) {
-      _accelerometerEvent = event;
-    });
-    magnetometerEventStream().listen((event) {
-      _magnetometerEvent = event;
-    });
+    try {
+      accelerometerEventStream().listen((event) {
+        _accelerometerEvent = event;
+      });
+      magnetometerEventStream().listen((event) {
+        _magnetometerEvent = event;
+      });
+    } catch (e) {
+      print('Sensor error: $e');
+    }
   }
 
   void _updateSky() {
@@ -357,6 +403,7 @@ class SkyMapProvider extends ChangeNotifier {
     final pitch = orientation.$2;
 
     _visibleObjects.clear();
+    _visibleHipStars.clear();
     _constellationLines.clear();
 
     for (final object in _catalog) {
@@ -368,7 +415,6 @@ class SkyMapProvider extends ChangeNotifier {
         lstDegrees,
       );
 
-      // Store Sun's coordinates for display
       if (object.name == 'Sun') {
         _lastSunAz = horizontal.$1;
         _lastSunAlt = horizontal.$2;
@@ -381,6 +427,7 @@ class SkyMapProvider extends ChangeNotifier {
         pitch,
         allowBelowHorizon: showAllPlanets && object.type == ObjectType.planet,
       );
+
       if (projected != null) {
         _visibleObjects.add(
           RenderedObject(
@@ -392,65 +439,62 @@ class SkyMapProvider extends ChangeNotifier {
       }
     }
 
-    _buildConstellation('Orion', [
-      _projectStar(
-        83.822,
-        -5.391,
-        position.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-      ),
-      _projectStar(
-        78.634,
-        -8.201,
-        position.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-      ),
-      _projectStar(
-        88.793,
-        7.407,
-        position.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-      ),
-    ]);
+    // Draw a star field from the HIP catalog (curated subset).
+    final hipStars = HIPCatalog.getVisibleStars(
+      position.latitude,
+      lstDegrees,
+      maxMagnitude: 5.5,
+      minAltitude: -5.0,
+    );
 
-    _buildConstellation('Ursa Major', [
-      _projectStar(
-        165.46,
-        56.38,
+    for (final star in hipStars) {
+      final projected = _projectStar(
+        star.ra,
+        star.dec,
         position.latitude,
         lstDegrees,
         azimuth,
         pitch,
-      ),
-      _projectStar(
-        183.86,
-        57.03,
-        position.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-      ),
-      _projectStar(
-        193.51,
-        55.96,
-        position.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-      ),
-    ]);
+      );
+      if (projected == null) continue;
 
-    _buildConstellation('Cassiopeia', [
-      _projectStar(10.13, 56.54, position.latitude, lstDegrees, azimuth, pitch),
-      _projectStar(17.43, 60.72, position.latitude, lstDegrees, azimuth, pitch),
-      _projectStar(28.60, 63.67, position.latitude, lstDegrees, azimuth, pitch),
-    ]);
+      _visibleHipStars.add(
+        RenderedStar(
+          offset: projected,
+          radius: star.getVisualRadius(),
+          color: star.getColorBySpectralClass(),
+          opacity: star.getOpacity(),
+        ),
+      );
+    }
+
+    // Constellation lines (from the local catalog).
+    final constellations =
+        ConstellationCatalog.getVisibleConstellations(position.latitude, lstDegrees);
+    for (final c in constellations) {
+      final projectedStars = <int, Offset>{};
+      for (var i = 0; i < c.stars.length; i++) {
+        final star = c.stars[i];
+        final projected = _projectStar(
+          star.ra,
+          star.dec,
+          position.latitude,
+          lstDegrees,
+          azimuth,
+          pitch,
+        );
+        if (projected != null) {
+          projectedStars[i] = projected;
+        }
+      }
+
+      for (final line in c.lines) {
+        final a = projectedStars[line.starIndex1];
+        final b = projectedStars[line.starIndex2];
+        if (a == null || b == null) continue;
+        _constellationLines.add(LineSegment(a, b, c.englishName));
+      }
+    }
 
     notifyListeners();
   }
@@ -465,7 +509,7 @@ class SkyMapProvider extends ChangeNotifier {
     final pitch = atan2(-a.x, sqrt((a.y * a.y) + (a.z * a.z))) * 180 / pi;
     final azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
 
-    const alpha = 0.15; // 0..1, чем меньше — тем плавнее
+    const alpha = 0.15;
     _smoothAzimuth = _lerpAngle(_smoothAzimuth, azimuth, alpha);
     _smoothPitch = _smoothPitch * (1 - alpha) + pitch * alpha;
 
@@ -531,29 +575,15 @@ class SkyMapProvider extends ChangeNotifier {
       return ((ra + 360) % 360, dec);
     }
 
-    final map = {
-      'Mercury': 75.0,
-      'Venus': 272.0,
-      'Earth': 0.0,
-      'Mars': 40.0,
-      'Jupiter': 120.0,
-      'Saturn': 210.0,
-      'Uranus': 300.0,
-      'Neptune': 330.0,
-    };
-    final phase = map[name] ?? 0.0;
-    final speed = switch (name) {
-      'Mercury' => 1.2,
-      'Venus' => 0.9,
-      'Mars' => 0.5,
-      'Jupiter' => 0.2,
-      'Saturn' => 0.15,
-      'Uranus' => 0.1,
-      'Neptune' => 0.08,
-      _ => 0.2,
-    };
-    final ra = (phase + deltaDays * speed) % 360;
-    final dec = 15 * sin((ra + phase) * _degToRad);
+    final elements = OrbitalElements.getPlanetByName(name);
+    if (elements != null) {
+      final eq = elements.getEquatorialPosition(julian);
+      return (eq.$1, eq.$2);
+    }
+
+    // Fallback: keep a simple educational placeholder if unknown.
+    final ra = (deltaDays * 0.2) % 360;
+    final dec = 10 * sin(ra * _degToRad);
     return (ra, dec);
   }
 
@@ -599,8 +629,8 @@ class SkyMapProvider extends ChangeNotifier {
       return null;
     }
 
-    final xNorm = relAz / azimuthFov; // -1..1
-    final yNorm = relAlt / altitudeFov; // -1..1
+    final xNorm = relAz / azimuthFov;
+    final yNorm = relAlt / altitudeFov;
     return Offset(xNorm, yNorm);
   }
 
@@ -621,14 +651,6 @@ class SkyMapProvider extends ChangeNotifier {
     );
   }
 
-  void _buildConstellation(String name, List<Offset?> stars) {
-    for (var i = 0; i < stars.length - 1; i++) {
-      if (stars[i] != null && stars[i + 1] != null) {
-        _constellationLines.add(LineSegment(stars[i]!, stars[i + 1]!, name));
-      }
-    }
-  }
-
   double _julianDate(DateTime date) {
     return date.millisecondsSinceEpoch / 86400000.0 + 2440587.5;
   }
@@ -638,36 +660,14 @@ class SkyMapProvider extends ChangeNotifier {
     final tapYNorm = -(tap.dy - size.height / 2) / (size.height / 2);
     final tapNorm = Offset(tapXNorm, tapYNorm);
 
-    Offset _withUiOffset(RenderedObject item) {
-      var o = item.offset;
-      switch (item.object.name) {
-        case 'Earth':
-          o += const Offset(0.04, -0.03);
-          break;
-        case 'Venus':
-          o += const Offset(0.06, 0.0);
-          break;
-        case 'Mercury':
-          o += const Offset(-0.05, 0.02);
-          break;
-        case 'Mars':
-          o += const Offset(-0.07, -0.01);
-          break;
-      }
-      return o;
-    }
-
-    const maxHitDist = 0.3; // generous tap target (normalized)
+    const maxHitDist = 0.3;
     RenderedObject? best;
     double bestScore = double.infinity;
 
     for (final object in _visibleObjects) {
-      final offset = _withUiOffset(object);
-      final dist = (offset - tapNorm).distance;
+      final dist = (object.offset - tapNorm).distance;
       if (dist > maxHitDist) continue;
 
-      // Pick the closest object; if distances are similar,
-      // slightly prefer planets over Sun/Moon so Earth isn't "blocked".
       final typePenalty = switch (object.object.type) {
         ObjectType.planet => 0.0,
         ObjectType.moon => 0.01,
@@ -685,40 +685,6 @@ class SkyMapProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selectByName(String name) {
-    // ищем уже отрисованный объект
-    final found = _visibleObjects.firstWhere(
-      (r) => r.object.name == name,
-      orElse: () => RenderedObject(
-        object: _catalog.firstWhere((c) => c.name == name),
-        offset: const Offset(0, 0),
-        radius: 6,
-      ),
-    );
-    selectedObject = found;
-    notifyListeners();
-  }
-
-  void _generateBackgroundStars() {
-    final random = Random();
-    _backgroundStars.clear();
-    for (int i = 0; i < 200; i++) {
-      final x = random.nextDouble() * 2 - 1; // -1..1
-      final y = random.nextDouble() * 2 - 1; // -1..1
-
-      final radius = random.nextDouble() * 1.5 + 0.5;
-      final colors = [
-        Colors.white,
-        Colors.white70,
-        Colors.blueGrey.shade100,
-        Colors.amber.shade100,
-      ];
-      final color = colors[random.nextInt(colors.length)];
-
-      _backgroundStars.add(BackgroundStar(Offset(x, y), radius, color));
-    }
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
@@ -726,37 +692,37 @@ class SkyMapProvider extends ChangeNotifier {
   }
 }
 
-class BackgroundStar {
-  final Offset position; // нормализованные координаты -1..1
-  final double radius;
-  final Color color;
-
-  BackgroundStar(this.position, this.radius, this.color);
-}
+// ============================================================================
+// HELPER CLASSES
+// ============================================================================
 
 class SkyPainter extends CustomPainter {
   final List<RenderedObject> objects;
+  final List<RenderedStar> hipStars;
   final List<LineSegment> constellationLines;
   final String? selectedObjectName;
-  final List<BackgroundStar> backgroundStars;
+  final bool nightVisionMode;
 
   SkyPainter(
     this.objects,
     this.constellationLines,
     this.selectedObjectName, {
-    this.backgroundStars = const [],
+    this.hipStars = const [],
+    this.nightVisionMode = false,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final background = Paint()..color = Colors.black;
+    final background = Paint()
+      ..color = nightVisionMode ? const Color(0xFF1a0000) : Colors.black;
     canvas.drawRect(Offset.zero & size, background);
 
-    // Фоновые звезды
     final starPaint = Paint();
-    for (final star in backgroundStars) {
-      starPaint.color = star.color.withOpacity(0.9);
-      canvas.drawCircle(_scale(star.position, size), star.radius, starPaint);
+    // HIP stars (real-ish star field) behind planets/moon/sun.
+    // These are drawn in a single pass for performance.
+    for (final star in hipStars) {
+      starPaint.color = star.color.withOpacity(star.opacity);
+      canvas.drawCircle(_scale(star.offset, size), star.radius, starPaint);
     }
 
     final linePaint = Paint()
@@ -775,24 +741,17 @@ class SkyPainter extends CustomPainter {
     for (final item in objects) {
       final isSelected = item.object.name == selectedObjectName;
       final baseColor = item.object.color;
-      final uiOffset = _withUiOffset(item);
-      final center = _scale(uiOffset, size);
+      final center = _scale(item.offset, size);
 
-      // Neon glow (всегда)
       final glowPaint = Paint()
         ..color = baseColor.withOpacity(isSelected ? 0.9 : 0.6)
-        ..maskFilter = const MaskFilter.blur(
-          BlurStyle.normal,
-          6,
-        ); // мягкое свечение
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
       canvas.drawCircle(center, item.radius * 2.4, glowPaint);
 
-      // Сам диск планеты
       final paint = Paint()..color = baseColor;
       final radius = isSelected ? item.radius * 1.8 : item.radius;
       canvas.drawCircle(center, radius, paint);
 
-      // Подпись
       final textPainter = TextPainter(
         text: TextSpan(
           text: item.object.name,
@@ -801,7 +760,6 @@ class SkyPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
-      // Place label outside the planet circle (no overlap).
       const gap = 4.0;
       Offset labelOffset = switch (item.object.type) {
         ObjectType.sun => Offset(
@@ -818,7 +776,6 @@ class SkyPainter extends CustomPainter {
           ),
       };
 
-      // Nudge labels to avoid overlaps (Sun/Earth etc.).
       Rect labelRect = (center + labelOffset) & textPainter.size;
       const maxTries = 12;
       var tries = 0;
@@ -830,7 +787,6 @@ class SkyPainter extends CustomPainter {
       }
       placedLabelRects.add(labelRect);
 
-      // Draw a subtle background behind text for readability.
       final bgRect = labelRect.inflate(3);
       final bgPaint = Paint()..color = Colors.black.withOpacity(0.55);
       canvas.drawRRect(
@@ -839,30 +795,6 @@ class SkyPainter extends CustomPainter {
       );
       textPainter.paint(canvas, labelRect.topLeft);
     }
-  }
-
-  Offset _withUiOffset(RenderedObject item) {
-    // базовый offset из провайдера (нормализованный)
-    var o = item.offset;
-
-    // небольшой сдвиг только для визуала
-    switch (item.object.name) {
-      case 'Earth':
-        o += const Offset(0.04, -0.03);
-        break;
-      case 'Venus':
-        o += const Offset(0.06, 0.0);
-        break;
-      case 'Mercury':
-        o += const Offset(-0.05, 0.02);
-        break;
-      case 'Mars':
-        o += const Offset(-0.07, -0.01);
-        break;
-      // дальше можешь поиграть со значениями для остальных
-    }
-
-    return o;
   }
 
   Offset _scale(Offset normalized, Size size) {
@@ -875,8 +807,9 @@ class SkyPainter extends CustomPainter {
   bool shouldRepaint(covariant SkyPainter oldDelegate) =>
       oldDelegate.selectedObjectName != selectedObjectName ||
       oldDelegate.objects != objects ||
+      oldDelegate.hipStars != hipStars ||
       oldDelegate.constellationLines != constellationLines ||
-      oldDelegate.backgroundStars != backgroundStars;
+      oldDelegate.nightVisionMode != nightVisionMode;
 }
 
 enum ObjectType { sun, moon, planet }
@@ -902,13 +835,26 @@ class RenderedObject {
   final double radius;
 
   String get name => object.name;
-
   String get description => object.description;
 
   RenderedObject({
     required this.object,
     required this.offset,
     required this.radius,
+  });
+}
+
+class RenderedStar {
+  final Offset offset;
+  final double radius;
+  final Color color;
+  final double opacity;
+
+  RenderedStar({
+    required this.offset,
+    required this.radius,
+    required this.color,
+    required this.opacity,
   });
 }
 
