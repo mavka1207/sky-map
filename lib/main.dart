@@ -205,6 +205,14 @@ class SkyMapProvider extends ChangeNotifier {
   double? _lastSunAlt;
   double _smoothAzimuth = 0;
   double _smoothPitch = 0;
+  bool _hasOrientationSeed = false;
+  double? _lastRawAzimuth;
+  double? _lastRawPitch;
+  int _stillCounter = 0;
+
+  double? _cachedJulian;
+  double? _cachedLstDegrees;
+  DateTime? _lastTimeUpdateUtc;
 
   RenderedObject? selectedObject;
   SkyMapException? _pendingError;
@@ -392,11 +400,22 @@ class SkyMapProvider extends ChangeNotifier {
       return;
     }
 
-    final now = DateTime.now().toUtc();
-    final julian = _julianDate(now);
-    final gmst = (18.697374558 + 24.06570982441908 * (julian - 2451545.0));
-    final gmstWrapped = (gmst % 24 + 24) % 24;
-    final lstDegrees = ((gmstWrapped * 15) + position.longitude) % 360;
+    // Update time-dependent sky coordinates at 1 Hz to avoid visible drift/jitter
+    // when the device is stationary (LST changes continuously).
+    final nowUtc = DateTime.now().toUtc();
+    final shouldUpdateTime = _lastTimeUpdateUtc == null ||
+        nowUtc.difference(_lastTimeUpdateUtc!).inMilliseconds >= 1000;
+    if (shouldUpdateTime || _cachedJulian == null || _cachedLstDegrees == null) {
+      _lastTimeUpdateUtc = nowUtc;
+      _cachedJulian = _julianDate(nowUtc);
+
+      final gmst =
+          (18.697374558 + 24.06570982441908 * (_cachedJulian! - 2451545.0));
+      final gmstWrapped = (gmst % 24 + 24) % 24;
+      _cachedLstDegrees = ((gmstWrapped * 15) + position.longitude) % 360;
+    }
+    final julian = _cachedJulian!;
+    final lstDegrees = _cachedLstDegrees!;
 
     final orientation = _estimateOrientation();
     final azimuth = orientation.$1;
@@ -509,9 +528,54 @@ class SkyMapProvider extends ChangeNotifier {
     final pitch = atan2(-a.x, sqrt((a.y * a.y) + (a.z * a.z))) * 180 / pi;
     final azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
 
-    const alpha = 0.15;
-    _smoothAzimuth = _lerpAngle(_smoothAzimuth, azimuth, alpha);
-    _smoothPitch = _smoothPitch * (1 - alpha) + pitch * alpha;
+    // Seed smoothing with the first real sensor reading to avoid a visible
+    // "settling" movement right after launch.
+    if (!_hasOrientationSeed) {
+      _hasOrientationSeed = true;
+      _smoothAzimuth = azimuth;
+      _smoothPitch = pitch;
+      _lastRawAzimuth = azimuth;
+      _lastRawPitch = pitch;
+      return (_smoothAzimuth, _smoothPitch);
+    }
+
+    // Magnetometer/accelerometer data is noisy even when the device is still.
+    // Apply a small deadband and "stillness" gating to prevent visible jitter.
+    const deadbandDeg = 0.35; // ignore tiny changes
+    const stillRawDeg = 0.20; // considered "still" if raw changes stay under this
+    const stillFramesToFreeze = 12; // ~1.2s at 10Hz
+
+    final prevRawAz = _lastRawAzimuth ?? azimuth;
+    final prevRawPitch = _lastRawPitch ?? pitch;
+    final rawAzDelta = (((azimuth - prevRawAz + 540) % 360) - 180).abs();
+    final rawPitchDelta = (pitch - prevRawPitch).abs();
+
+    _lastRawAzimuth = azimuth;
+    _lastRawPitch = pitch;
+
+    if (rawAzDelta < stillRawDeg && rawPitchDelta < stillRawDeg) {
+      _stillCounter++;
+    } else {
+      _stillCounter = 0;
+    }
+
+    if (_stillCounter >= stillFramesToFreeze) {
+      return (_smoothAzimuth, _smoothPitch);
+    }
+
+    // Stronger smoothing than before to reduce jitter.
+    const alpha = 0.06;
+
+    final smoothAzDelta =
+        (((azimuth - _smoothAzimuth + 540) % 360) - 180).abs();
+    if (smoothAzDelta >= deadbandDeg) {
+      _smoothAzimuth = _lerpAngle(_smoothAzimuth, azimuth, alpha);
+    }
+
+    final smoothPitchDelta = (pitch - _smoothPitch).abs();
+    if (smoothPitchDelta >= deadbandDeg) {
+      _smoothPitch = _smoothPitch * (1 - alpha) + pitch * alpha;
+    }
 
     return (_smoothAzimuth, _smoothPitch);
   }
