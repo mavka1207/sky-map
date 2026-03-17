@@ -114,6 +114,62 @@ class SkyMapPage extends StatelessWidget {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                const Text(
+                  'Show constellations',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const Spacer(),
+                Switch.adaptive(
+                  value: provider.showConstellations,
+                  onChanged: provider.setShowConstellations,
+                ),
+              ],
+            ),
+          ),
+          if (provider.showConstellations)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Row(
+                children: [
+                  const Text(
+                    'Constellation',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF101010),
+                        value: provider.selectedConstellationKey ?? '__all__',
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: '__all__',
+                            child: Text('All visible'),
+                          ),
+                          ...provider.constellationKeys.map(
+                            (k) => DropdownMenuItem<String>(
+                              value: k,
+                              child: Text(k),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          provider.setSelectedConstellationKey(
+                            value == '__all__' ? null : value,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -194,6 +250,8 @@ class SkyMapProvider extends ChangeNotifier {
   Timer? _timer;
 
   bool showAllPlanets = false;
+  bool showConstellations = true;
+  String? selectedConstellationKey;
 
   final List<CelestialObject> _catalog = [];
   final List<RenderedObject> _visibleObjects = [];
@@ -221,6 +279,11 @@ class SkyMapProvider extends ChangeNotifier {
   List<RenderedStar> get visibleHipStars => List.unmodifiable(_visibleHipStars);
   List<LineSegment> get constellationLines => List.unmodifiable(_constellationLines);
   List<CelestialObject> get pickerObjects => _catalog;
+  List<String> get constellationKeys {
+    final keys = ConstellationCatalog.getConstellationNames();
+    keys.sort();
+    return keys;
+  }
 
   SkyMapException? takePendingError() {
     final err = _pendingError;
@@ -230,6 +293,19 @@ class SkyMapProvider extends ChangeNotifier {
 
   void setShowAllPlanets(bool value) {
     showAllPlanets = value;
+    notifyListeners();
+  }
+
+  void setShowConstellations(bool value) {
+    showConstellations = value;
+    if (!value) {
+      selectedConstellationKey = null;
+    }
+    notifyListeners();
+  }
+
+  void setSelectedConstellationKey(String? key) {
+    selectedConstellationKey = key;
     notifyListeners();
   }
 
@@ -487,31 +563,43 @@ class SkyMapProvider extends ChangeNotifier {
       );
     }
 
-    // Constellation lines (from the local catalog).
-    final constellations =
-        ConstellationCatalog.getVisibleConstellations(position.latitude, lstDegrees);
-    for (final c in constellations) {
-      final projectedStars = <int, Offset>{};
-      for (var i = 0; i < c.stars.length; i++) {
-        final star = c.stars[i];
-        final projected = _projectStar(
-          star.ra,
-          star.dec,
+    if (showConstellations) {
+      // Constellation lines (from the local catalog).
+      final List<ConstellationInfo> constellations;
+      final selectedKey = selectedConstellationKey;
+      if (selectedKey != null) {
+        final selected = ConstellationCatalog.getConstellation(selectedKey);
+        constellations = selected == null ? const [] : [selected];
+      } else {
+        constellations = ConstellationCatalog.getVisibleConstellations(
           position.latitude,
           lstDegrees,
-          azimuth,
-          pitch,
         );
-        if (projected != null) {
-          projectedStars[i] = projected;
-        }
       }
 
-      for (final line in c.lines) {
-        final a = projectedStars[line.starIndex1];
-        final b = projectedStars[line.starIndex2];
-        if (a == null || b == null) continue;
-        _constellationLines.add(LineSegment(a, b, c.englishName));
+      for (final c in constellations) {
+        final projectedStars = <int, Offset>{};
+        for (var i = 0; i < c.stars.length; i++) {
+          final star = c.stars[i];
+          final projected = _projectStar(
+            star.ra,
+            star.dec,
+            position.latitude,
+            lstDegrees,
+            azimuth,
+            pitch,
+          );
+          if (projected != null) {
+            projectedStars[i] = projected;
+          }
+        }
+
+        for (final line in c.lines) {
+          final a = projectedStars[line.starIndex1];
+          final b = projectedStars[line.starIndex2];
+          if (a == null || b == null) continue;
+          _constellationLines.add(LineSegment(a, b, c.englishName));
+        }
       }
     }
 
