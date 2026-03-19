@@ -2,16 +2,16 @@
 // SKY MAP - INTEGRATION OF ALL IMPROVEMENTS
 // ============================================================================
 
-// ignore_for_file: avoid_print, deprecated_member_use, unused_element
+// ignore_for_file: deprecated_member_use, unused_element
 
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -58,7 +58,7 @@ class _SkyMapAppState extends State<SkyMapApp> {
   }
 }
 
-class SkyMapPage extends StatelessWidget {
+class SkyMapPage extends StatefulWidget {
   final bool nightVisionMode;
   final Function(bool) onNightVisionChanged;
 
@@ -68,6 +68,11 @@ class SkyMapPage extends StatelessWidget {
     required this.onNightVisionChanged,
   });
 
+  @override
+  State<SkyMapPage> createState() => _SkyMapPageState();
+}
+
+class _SkyMapPageState extends State<SkyMapPage> {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SkyMapProvider>();
@@ -84,8 +89,11 @@ class SkyMapPage extends StatelessWidget {
         title: const Text('Sky Map'),
         actions: [
           IconButton(
-            icon: Icon(nightVisionMode ? Icons.dark_mode : Icons.light_mode),
-            onPressed: () => onNightVisionChanged(!nightVisionMode),
+            icon: Icon(
+              widget.nightVisionMode ? Icons.dark_mode : Icons.light_mode,
+            ),
+            onPressed: () =>
+                widget.onNightVisionChanged(!widget.nightVisionMode),
             tooltip: 'Night Vision',
           ),
         ],
@@ -156,7 +164,7 @@ class SkyMapPage extends StatelessWidget {
                       provider.constellationLines,
                       provider.selectedObject?.name,
                       hipStars: provider.visibleHipStars,
-                      nightVisionMode: nightVisionMode,
+                      nightVisionMode: widget.nightVisionMode,
                     ),
                     child: Container(),
                   ),
@@ -366,7 +374,7 @@ class SkyMapProvider extends ChangeNotifier {
   Future<void> initialize() async {
     _buildBaseCatalog();
     _baseJulian = _julianDate(DateTime.now().toUtc());
-    await _loadPlanetDescriptions();
+    await _loadPlanetDescriptionsFromJson();
     await _initializeSensorsWithHandling();
     await _setupLocation();
     _listenSensors();
@@ -449,36 +457,36 @@ class SkyMapProvider extends ChangeNotifier {
       ]);
   }
 
-  Future<void> _loadPlanetDescriptions() async {
+  Future<void> _loadPlanetDescriptionsFromJson() async {
     try {
-      final response = await http.get(
-        Uri.parse('https://api.le-systeme-solaire.net/rest/bodies/'),
-      );
-      if (response.statusCode != 200) return;
-
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final List<dynamic> bodies = decoded['bodies'] as List<dynamic>;
+      final jsonStr = await rootBundle.loadString('assets/planet_data.json');
+      final List<dynamic> decoded = jsonDecode(jsonStr) as List<dynamic>;
 
       for (final object in _catalog) {
-        final matched = bodies
-            .cast<Map<String, dynamic>?>()
-            .whereType<Map<String, dynamic>>()
+        final Map<String, dynamic> match = decoded
+            .cast<Map<String, dynamic>>()
             .firstWhere(
-              (body) =>
-                  (body['englishName'] as String?)?.toLowerCase() ==
+              (m) =>
+                  (m['name'] as String?)?.toLowerCase() ==
                   object.name.toLowerCase(),
               orElse: () => <String, dynamic>{},
             );
 
-        if (matched.isNotEmpty) {
-          final mass = (matched['mass']?['massValue'] ?? 'n/a').toString();
-          final gravity = (matched['gravity'] ?? 'n/a').toString();
-          object.description =
-              '${object.baseDescription} Mass: $mass; Gravity: $gravity';
+        if (match.isNotEmpty) {
+          final mass = (match['mass'] ?? 'n/a').toString();
+          final gravity = (match['gravity'] ?? 'n/a').toString();
+          final extraDesc =
+              (match['description'] as String?) ?? object.baseDescription;
+
+          object.description = '$extraDesc\n\nMass: $mass\nGravity: $gravity';
+        } else {
+          object.description = object.baseDescription;
         }
       }
     } catch (e) {
-      print('Error loading planet descriptions: $e');
+      for (final object in _catalog) {
+        object.description = object.baseDescription;
+      }
     }
   }
 
@@ -511,7 +519,7 @@ class SkyMapProvider extends ChangeNotifier {
         _magnetometerEvent = event;
       });
     } catch (e) {
-      print('Sensor error: $e');
+      // Silent error handling
     }
   }
 
@@ -526,7 +534,6 @@ class SkyMapProvider extends ChangeNotifier {
     } catch (e) {
       // If compass isn't available (simulator / device limitations),
       // the UI will still run but heading will stay at last known value.
-      print('Compass error: $e');
     }
   }
 
@@ -604,12 +611,7 @@ class SkyMapProvider extends ChangeNotifier {
         _lastSunAlt = horizontal.$2;
       }
 
-      // DEBUG: Log planet positions
-      if (object.type == ObjectType.planet) {
-        print(
-          '${object.name}: RA=${equatorial.$1.toStringAsFixed(1)}° Dec=${equatorial.$2.toStringAsFixed(1)}° | Az=${horizontal.$1.toStringAsFixed(0)}° Alt=${horizontal.$2.toStringAsFixed(0)}°',
-        );
-      }
+      // DEBUG: Log planet positions (removed for production)
 
       final projected = _projectToScreen(
         horizontal.$1,
@@ -712,7 +714,6 @@ class SkyMapProvider extends ChangeNotifier {
       }
     }
 
-    print('✨ Visible objects: ${_visibleObjects.length}');
     notifyListeners();
   }
 

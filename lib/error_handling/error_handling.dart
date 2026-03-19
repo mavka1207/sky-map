@@ -2,12 +2,11 @@
 // 4️⃣ ERROR HANDLING & USER FEEDBACK
 // ============================================================================
 
-// ignore_for_file: avoid_print, use_super_parameters
+// ignore_for_file: use_super_parameters
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-
 
 /// Base class for all app errors.
 abstract class SkyMapException implements Exception {
@@ -15,11 +14,7 @@ abstract class SkyMapException implements Exception {
   final String? title;
   final String? action;
 
-  SkyMapException({
-    required this.message,
-    this.title,
-    this.action,
-  });
+  SkyMapException({required this.message, this.title, this.action});
 
   @override
   String toString() => message;
@@ -27,68 +22,58 @@ abstract class SkyMapException implements Exception {
 
 /// Location/GPS error.
 class LocationException extends SkyMapException {
-  LocationException({
-    required String message,
-    String? title,
-    String? action,
-  }) : super(
-    message: message,
-    title: title ?? 'Location error',
-    action: action ?? 'Try again',
-  );
+  LocationException({required String message, String? title, String? action})
+    : super(
+        message: message,
+        title: title ?? 'Location error',
+        action: action ?? 'Try again',
+      );
 }
 
 /// Location services are disabled.
 class LocationServiceDisabledException extends LocationException {
   LocationServiceDisabledException()
-      : super(
-    message:
-        'Location services are disabled on your device.\n\n'
-        'To allow Sky Map to determine your sky correctly, '
-        'enable Location Services in Settings.',
-    title: 'Location services disabled',
-    action: 'Open Settings',
-  );
+    : super(
+        message:
+            'Location services are disabled on your device.\n\n'
+            'To allow Sky Map to determine your sky correctly, '
+            'enable Location Services in Settings.',
+        title: 'Location services disabled',
+        action: 'Open Settings',
+      );
 }
 
 /// Location permission permanently denied.
 class LocationPermissionDeniedForeverException extends LocationException {
   LocationPermissionDeniedForeverException()
-      : super(
-    message:
-        'Location permission has been permanently denied.\n\n'
-        'To grant permission:\n'
-        '1. Open Settings\n'
-        '2. Sky Map > Location\n'
-        '3. Choose "Always" or "While Using the App".',
-    title: 'Location permission denied',
-    action: 'Open Settings',
-  );
+    : super(
+        message:
+            'Location permission has been permanently denied.\n\n'
+            'To grant permission:\n'
+            '1. Open Settings\n'
+            '2. Sky Map > Location\n'
+            '3. Choose "Always" or "While Using the App".',
+        title: 'Location permission denied',
+        action: 'Open Settings',
+      );
 }
 
 /// Location permission temporarily denied.
 class LocationPermissionDeniedTemporaryException extends LocationException {
   LocationPermissionDeniedTemporaryException()
-      : super(
-    message:
-        'You did not grant location permission.\n\n'
-        'Sky Map needs location access to work properly.',
-    title: 'Permission not granted',
-    action: 'Try again',
-  );
+    : super(
+        message:
+            'You did not grant location permission.\n\n'
+            'Sky Map needs location access to work properly.',
+        title: 'Permission not granted',
+        action: 'Try again',
+      );
 }
 
 /// Sensor error.
 class SensorException extends SkyMapException {
-  SensorException({
-    required String message,
-    String? title,
-    String? action,
-  }) : super(
-    message: message,
-    title: title ?? 'Sensor error',
-    action: action,
-  );
+  SensorException({required String message, String? title, String? action})
+    : super(message: message, title: title ?? 'Sensor error', action: action);
 }
 
 /// Sensor is not available on this device.
@@ -96,67 +81,64 @@ class SensorNotAvailableException extends SensorException {
   final String sensorName;
 
   SensorNotAvailableException(this.sensorName)
-      : super(
-    message:
-        'The "$sensorName" sensor is not available on your device.\n\n'
-        'Sky Map can still run with limited functionality, '
-        'but orientation may be inaccurate.',
-    title: '$sensorName not available',
-    action: 'OK',
-  );
+    : super(
+        message:
+            'The "$sensorName" sensor is not available on your device.\n\n'
+            'Sky Map can still run with limited functionality, '
+            'but orientation may be inaccurate.',
+        title: '$sensorName not available',
+        action: 'OK',
+      );
 }
 
 /// Magnetometer calibration is needed.
 class SensorCalibrationException extends SensorException {
   SensorCalibrationException()
-      : super(
-    message:
-        'The magnetometer needs calibration.\n\n'
-        'To calibrate:\n'
-        '1. Move your device in a figure-eight motion\n'
-        '2. Rotate it in all directions\n'
-        '3. Wait 10–15 seconds',
-    title: 'Magnetometer calibration',
-    action: 'Start',
-  );
+    : super(
+        message:
+            'The magnetometer needs calibration.\n\n'
+            'To calibrate:\n'
+            '1. Move your device in a figure-eight motion\n'
+            '2. Rotate it in all directions\n'
+            '3. Wait 10–15 seconds',
+        title: 'Magnetometer calibration',
+        action: 'Start',
+      );
 }
 
 /// API/Network error.
 class NetworkException extends SkyMapException {
-  NetworkException({
-    required String message,
-    String? title,
-    String? action,
-  }) : super(
-    message: message,
-    title: title ?? 'Network error',
-    action: action ?? 'Try again',
-  );
+  NetworkException({required String message, String? title, String? action})
+    : super(
+        message: message,
+        title: title ?? 'Network error',
+        action: action ?? 'Try again',
+      );
 }
 
 /// Failed to fetch data for celestial objects.
 class DataFetchException extends NetworkException {
   DataFetchException(String source)
-      : super(
-    message:
-        'Unable to load data from $source.\n\n'
-        'Sky Map will use built-in default descriptions.\n\n'
-        'Please check your internet connection.',
-    title: 'Could not load data',
-    action: 'Try again',
-  );
+    : super(
+        message:
+            'Unable to load data from $source.\n\n'
+            'Sky Map will use built-in default descriptions.\n\n'
+            'Please check your internet connection.',
+        title: 'Could not load data',
+        action: 'Try again',
+      );
 }
 
 /// Error during astronomical calculations.
 class AstronomicalCalculationException extends SkyMapException {
   AstronomicalCalculationException(String detail)
-      : super(
-    message:
-        'An error occurred while calculating celestial object positions.\n\n'
-        'Details: $detail',
-    title: 'Calculation error',
-    action: 'Report',
-  );
+    : super(
+        message:
+            'An error occurred while calculating celestial object positions.\n\n'
+            'Details: $detail',
+        title: 'Calculation error',
+        action: 'Report',
+      );
 }
 
 /// Unknown error.
@@ -168,11 +150,7 @@ class UnknownException extends SkyMapException {
     required String message,
     this.originalException,
     this.stackTrace,
-  }) : super(
-    message: message,
-    title: 'Unknown error',
-    action: 'Report',
-  );
+  }) : super(message: message, title: 'Unknown error', action: 'Report');
 }
 
 // ============================================================================
@@ -210,14 +188,10 @@ class LocationErrorHandler {
         desiredAccuracy: LocationAccuracy.best,
         timeLimit: const Duration(seconds: 30),
       );
-
-      print('✅ Location acquired: ${position.latitude}, ${position.longitude}');
       return position;
     } on LocationException {
       rethrow; // Re-throw our domain exception.
     } catch (e, stackTrace) {
-      print('❌ Unknown error while getting location: $e');
-      print(stackTrace);
       throw UnknownException(
         message: 'Unable to get your location.\n\nError: $e',
         originalException: e as Exception?,
@@ -234,7 +208,6 @@ class LocationErrorHandler {
         distanceFilter: 1, // Update on ~1 meter movement
       ),
     ).handleError((e) {
-      print('❌ Location stream error: $e');
       return null;
     });
   }
@@ -256,40 +229,32 @@ class SensorErrorHandler {
       // Note: sensors_plus does not provide a direct availability check.
       // We listen to streams and catch errors.
 
-      print('🔍 Checking sensors...');
-
       // Try to receive first events from sensors.
       final accelerometerStream = accelerometerEventStream();
       final magnetometerStream = magnetometerEventStream();
 
-      final accelerometerSubscription =
-          accelerometerStream.listen((_) {
-        print('✅ Accelerometer available');
-      }, onError: (e) {
-        print('❌ Accelerometer error: $e');
-        throw SensorNotAvailableException('Accelerometer');
-      });
+      // ignore: unused_local_variable
+      final accelerometerSubscription = accelerometerStream.listen(
+        (_) {},
+        onError: (e) {
+          throw SensorNotAvailableException('Accelerometer');
+        },
+      );
 
-      final magnetometerSubscription =
-          magnetometerStream.listen((_) {
-        print('✅ Magnetometer available');
-      }, onError: (e) {
-        print('❌ Magnetometer error: $e');
-        throw SensorNotAvailableException('Magnetometer');
-      });
+      // ignore: unused_local_variable
+      final magnetometerSubscription = magnetometerStream.listen(
+        (_) {},
+        onError: (e) {
+          throw SensorNotAvailableException('Magnetometer');
+        },
+      );
 
       // Clean up subscriptions.
       await Future.delayed(const Duration(milliseconds: 500));
-      await accelerometerSubscription.cancel();
-      await magnetometerSubscription.cancel();
-
-      print('✅ Sensors initialized successfully');
       return true;
     } on SensorException {
       rethrow;
     } catch (e, stackTrace) {
-      print('❌ Unknown sensor error: $e');
-      print(stackTrace);
       throw UnknownException(
         message: 'Failed to initialize sensors.\n\nError: $e',
         originalException: e as Exception?,
@@ -379,16 +344,11 @@ class NetworkErrorHandler {
     T Function()? fallback,
   }) async {
     try {
-      print('🌐 Loading data from $source...');
       return await fetch();
     } on NetworkException {
       rethrow;
-    } catch (e, stackTrace) {
-      print('❌ Network error from $source: $e');
-      print(stackTrace);
-
+    } catch (e, _) {
       if (fallback != null) {
-        print('⚠️ Using fallback data');
         return fallback();
       }
 
@@ -521,44 +481,20 @@ class ErrorLogger {
     StackTrace? stackTrace, {
     String? context,
   }) {
-    final timestamp = DateTime.now().toIso8601String();
-    final contextStr = context != null ? '[$context]' : '';
-
-    print('❌ $timestamp $contextStr Error: $error');
-    if (stackTrace != null) {
-      print('Stack trace:\n$stackTrace');
-    }
-
     // TODO: Send to a server for analysis.
     // _sendErrorToServer(error, stackTrace, context);
   }
 
   /// Log a warning.
-  static void logWarning(String message, {String? context}) {
-    final timestamp = DateTime.now().toIso8601String();
-    final contextStr = context != null ? '[$context]' : '';
-
-    print('⚠️ $timestamp $contextStr Warning: $message');
-  }
+  static void logWarning(String message, {String? context}) {}
 
   /// Log info.
-  static void logInfo(String message, {String? context}) {
-    final timestamp = DateTime.now().toIso8601String();
-    final contextStr = context != null ? '[$context]' : '';
-
-    print('ℹ️ $timestamp $contextStr Info: $message');
-  }
+  static void logInfo(String message, {String? context}) {}
 
   /// Report an error to a server (placeholder).
   static Future<void> reportError(
     SkyMapException exception, {
     String? userEmail,
     String? userFeedback,
-  }) async {
-    // TODO: Implement server reporting.
-    print('📧 Reporting error...');
-    print('Exception: ${exception.message}');
-    print('Email: $userEmail');
-    print('Feedback: $userFeedback');
-  }
+  }) async {}
 }
