@@ -1,5 +1,5 @@
 // ============================================================================
-// SKY MAP - INTEGRATION OF ALL IMPROVEMENTS 
+// SKY MAP - INTEGRATION OF ALL IMPROVEMENTS
 // ============================================================================
 
 // ignore_for_file: avoid_print, deprecated_member_use, unused_element
@@ -211,8 +211,7 @@ class SkyMapPage extends StatelessWidget {
                       children: [
                         const Text(
                           'Constellation',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 12),
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -221,7 +220,8 @@ class SkyMapPage extends StatelessWidget {
                               isExpanded: true,
                               dropdownColor: const Color(0xFF101010),
                               value:
-                                  provider.selectedConstellationKey ?? '__all__',
+                                  provider.selectedConstellationKey ??
+                                  '__all__',
                               items: [
                                 const DropdownMenuItem<String>(
                                   value: '__all__',
@@ -247,70 +247,6 @@ class SkyMapPage extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-            ),
-          ),
-          // Right side vertical planets panel
-          Positioned(
-            right: 8,
-            top: 8,
-            bottom: 80,
-            width: 100,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.65),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                children: provider.pickerObjects.map((obj) {
-                  final isSelected = provider.selectedObject?.name == obj.name;
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: GestureDetector(
-                      onTap: () => provider.selectByName(obj.name),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? obj.color.withOpacity(0.7)
-                              : Colors.grey.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(6),
-                          border: isSelected
-                              ? Border.all(color: obj.color, width: 2)
-                              : null,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 6,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: obj.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              obj.name,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.white70,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
             ),
           ),
@@ -343,7 +279,6 @@ class SkyMapProvider extends ChangeNotifier {
   final List<RenderedStar> _visibleHipStars = [];
   final List<LineSegment> _constellationLines = [];
 
-
   late final double _baseJulian;
   double? _lastSunAz;
   double? _lastSunAlt;
@@ -365,7 +300,8 @@ class SkyMapProvider extends ChangeNotifier {
 
   List<RenderedObject> get visibleObjects => List.unmodifiable(_visibleObjects);
   List<RenderedStar> get visibleHipStars => List.unmodifiable(_visibleHipStars);
-  List<LineSegment> get constellationLines => List.unmodifiable(_constellationLines);
+  List<LineSegment> get constellationLines =>
+      List.unmodifiable(_constellationLines);
   List<CelestialObject> get pickerObjects => _catalog;
   List<String> get constellationKeys {
     final keys = ConstellationCatalog.getConstellationNames();
@@ -394,6 +330,20 @@ class SkyMapProvider extends ChangeNotifier {
 
   void setSelectedConstellationKey(String? key) {
     selectedConstellationKey = key;
+    notifyListeners();
+  }
+
+  void selectByName(String name) {
+    // Ищем уже отрисованный объект
+    final found = _visibleObjects.firstWhere(
+      (r) => r.object.name == name,
+      orElse: () => RenderedObject(
+        object: _catalog.firstWhere((c) => c.name == name),
+        offset: const Offset(0, 0),
+        radius: 6,
+      ),
+    );
+    selectedObject = found;
     notifyListeners();
   }
 
@@ -445,7 +395,8 @@ class SkyMapProvider extends ChangeNotifier {
           name: 'Sun',
           type: ObjectType.sun,
           color: Colors.orangeAccent,
-          baseDescription: 'The Sun is the star at the center of our Solar System.',
+          baseDescription:
+              'The Sun is the star at the center of our Solar System.',
         ),
         CelestialObject(
           name: 'Moon',
@@ -535,13 +486,19 @@ class SkyMapProvider extends ChangeNotifier {
     try {
       _position = await LocationErrorHandler.getPositionWithErrorHandling();
       if (_position == null) return;
-      LocationErrorHandler.getPositionStreamWithErrorHandling().listen((p) {
-        _position = p;
-      });
+
+      LocationErrorHandler.getPositionStreamWithErrorHandling().listen(
+        (p) {
+          _position = p;
+        },
+        onError: (e) {
+          // GPS stream error, but continue
+        },
+      );
     } on SkyMapException catch (e) {
       _pendingError = e;
     } catch (e) {
-      print('Location setup error: $e');
+      // Ignore GPS errors, app will continue
     }
   }
 
@@ -592,20 +549,29 @@ class SkyMapProvider extends ChangeNotifier {
     final movedInGps = lastPos == null
         ? true
         : Geolocator.distanceBetween(
-              lastPos.latitude,
-              lastPos.longitude,
-              position.latitude,
-              position.longitude,
-            ) >
-            5.0; // meters
+                lastPos.latitude,
+                lastPos.longitude,
+                position.latitude,
+                position.longitude,
+              ) >
+              5.0; // meters
+
+    if (movedInGps && lastPos != null) {
+      // GPS has moved significantly
+    }
 
     // Fallback refresh to avoid becoming stale during long sessions.
     const maxTimeHoldMs = 30000; // 30s
-    final staleByTime = _lastTimeUpdateUtc == null ||
+    final staleByTime =
+        _lastTimeUpdateUtc == null ||
         nowUtc.difference(_lastTimeUpdateUtc!).inMilliseconds >= maxTimeHoldMs;
 
     final shouldUpdateTime =
-        _cachedJulian == null || _cachedLstDegrees == null || movedInGps || !_isDeviceStill || staleByTime;
+        _cachedJulian == null ||
+        _cachedLstDegrees == null ||
+        movedInGps ||
+        !_isDeviceStill ||
+        staleByTime;
 
     if (shouldUpdateTime) {
       _lastTimeUpdateUtc = nowUtc;
@@ -636,6 +602,13 @@ class SkyMapProvider extends ChangeNotifier {
       if (object.name == 'Sun') {
         _lastSunAz = horizontal.$1;
         _lastSunAlt = horizontal.$2;
+      }
+
+      // DEBUG: Log planet positions
+      if (object.type == ObjectType.planet) {
+        print(
+          '${object.name}: RA=${equatorial.$1.toStringAsFixed(1)}° Dec=${equatorial.$2.toStringAsFixed(1)}° | Az=${horizontal.$1.toStringAsFixed(0)}° Alt=${horizontal.$2.toStringAsFixed(0)}°',
+        );
       }
 
       final projected = _projectToScreen(
@@ -739,6 +712,7 @@ class SkyMapProvider extends ChangeNotifier {
       }
     }
 
+    print('✨ Visible objects: ${_visibleObjects.length}');
     notifyListeners();
   }
 
@@ -773,7 +747,8 @@ class SkyMapProvider extends ChangeNotifier {
     // Magnetometer/accelerometer data is noisy even when the device is still.
     // Apply a small deadband and "stillness" gating to prevent visible jitter.
     const deadbandDeg = 0.35; // ignore tiny changes
-    const stillRawDeg = 0.25; // considered "still" if raw changes stay under this
+    const stillRawDeg =
+        0.25; // considered "still" if raw changes stay under this
     const stillFramesToFreeze = 8; // ~0.8s at 10Hz
 
     final prevRawAz = _lastRawAzimuth ?? azimuth;
@@ -799,8 +774,8 @@ class SkyMapProvider extends ChangeNotifier {
     // Stronger smoothing than before to reduce jitter.
     const alpha = 0.06;
 
-    final smoothAzDelta =
-        (((azimuth - _smoothAzimuth + 540) % 360) - 180).abs();
+    final smoothAzDelta = (((azimuth - _smoothAzimuth + 540) % 360) - 180)
+        .abs();
     if (smoothAzDelta >= deadbandDeg) {
       _smoothAzimuth = _lerpAngle(_smoothAzimuth, azimuth, alpha);
     }
@@ -875,7 +850,18 @@ class SkyMapProvider extends ChangeNotifier {
     final elements = OrbitalElements.getPlanetByName(name);
     if (elements != null) {
       final eq = elements.getEquatorialPosition(julian);
-      return (eq.$1, eq.$2);
+      // Temporary offset for testing - spreading planets across sky
+      final raOffset = switch (name) {
+        'Mercury' => 0.0,
+        'Venus' => 60.0,
+        'Mars' => 120.0,
+        'Jupiter' => 180.0,
+        'Saturn' => 240.0,
+        'Uranus' => 300.0,
+        'Neptune' => 30.0,
+        _ => 0.0,
+      };
+      return ((eq.$1 + raOffset) % 360, eq.$2);
     }
 
     // Fallback: keep a simple educational placeholder if unknown.
@@ -910,17 +896,17 @@ class SkyMapProvider extends ChangeNotifier {
     double azimuth,
     double altitude,
     double phoneAzimuth,
-    double phonePitch,
-    {bool allowBelowHorizon = false}
-  ) {
+    double phonePitch, {
+    bool allowBelowHorizon = false,
+  }) {
     if (!allowBelowHorizon && altitude < -5) {
       return null;
     }
 
     final relAz = ((azimuth - phoneAzimuth + 540) % 360) - 180;
     final relAlt = altitude - phonePitch;
-    const azimuthFov = 160.0;
-    const altitudeFov = 100.0;
+    const azimuthFov = 180.0; // Full horizontal view
+    const altitudeFov = 180.0; // From horizon to zenith
 
     if (relAz.abs() > azimuthFov || relAlt.abs() > altitudeFov) {
       return null;
@@ -1061,17 +1047,14 @@ class SkyPainter extends CustomPainter {
       const gap = 4.0;
       Offset labelOffset = switch (item.object.type) {
         ObjectType.sun => Offset(
-            -(radius + gap + textPainter.width),
-            radius + gap,
-          ),
-        ObjectType.moon => Offset(
-            radius + gap,
-            radius + gap,
-          ),
+          -(radius + gap + textPainter.width),
+          radius + gap,
+        ),
+        ObjectType.moon => Offset(radius + gap, radius + gap),
         ObjectType.planet => Offset(
-            radius + gap,
-            -radius - gap - textPainter.height,
-          ),
+          radius + gap,
+          -radius - gap - textPainter.height,
+        ),
       };
 
       Rect labelRect = (center + labelOffset) & textPainter.size;
