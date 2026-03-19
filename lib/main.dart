@@ -172,90 +172,82 @@ class _SkyMapPageState extends State<SkyMapPage> {
               },
             ),
           ),
-          // Bottom controls panel
+          // Bottom controls – compact pill
           Positioned(
             left: 12,
             right: 12,
-            bottom: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.65),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Show all planets',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Switch.adaptive(
-                        value: provider.showAllPlanets,
-                        onChanged: provider.setShowAllPlanets,
-                      ),
-                    ],
+            bottom: 24,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // слева – маленький чип с планетами
+                FilterChip(
+                  label: const Text('Planets'),
+                  selected: provider.showAllPlanets,
+                  onSelected: provider.setShowAllPlanets,
+                  backgroundColor: Colors.black.withOpacity(0.4),
+                  selectedColor: Colors.white12,
+                  labelStyle: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.white70,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Text(
-                        'Show constellations',
-                        style: TextStyle(color: Colors.white70, fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Switch.adaptive(
-                        value: provider.showConstellations,
-                        onChanged: provider.setShowConstellations,
-                      ),
-                    ],
-                  ),
-                  if (provider.showConstellations) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Text(
-                          'Constellation',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              isExpanded: true,
-                              dropdownColor: const Color(0xFF101010),
-                              value:
-                                  provider.selectedConstellationKey ??
-                                  '__all__',
-                              items: [
-                                const DropdownMenuItem<String>(
-                                  value: '__all__',
-                                  child: Text('All visible'),
-                                ),
-                                ...provider.constellationKeys.map(
-                                  (k) => DropdownMenuItem<String>(
-                                    value: k,
-                                    child: Text(k),
-                                  ),
-                                ),
-                              ],
-                              onChanged: (value) {
-                                if (value == null) return;
-                                provider.setSelectedConstellationKey(
-                                  value == '__all__' ? null : value,
-                                );
-                              },
+                ),
+                // по центру – выбор созвездий
+                if (provider.showConstellations)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          iconSize: 18,
+                          isExpanded: true,
+                          dropdownColor: const Color(0xFF101010),
+                          value: provider.selectedConstellationKey ?? '__all__',
+                          items: [
+                            const DropdownMenuItem(
+                              value: '__all__',
+                              child: Text(
+                                'All constellations',
+                                style: TextStyle(fontSize: 11),
+                              ),
                             ),
-                          ),
+                            ...provider.constellationKeys.map(
+                              (k) => DropdownMenuItem(
+                                value: k,
+                                child: Text(
+                                  k,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            provider.setSelectedConstellationKey(
+                              value == '__all__' ? null : value,
+                            );
+                          },
                         ),
-                      ],
+                      ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                // справа – маленькая иконка включения/выключения созвездий
+                IconButton(
+                  iconSize: 22,
+                  color: Colors.white70,
+                  onPressed: () {
+                    provider.setShowConstellations(
+                      !provider.showConstellations,
+                    );
+                  },
+                  icon: Icon(
+                    provider.showConstellations
+                        ? Icons.auto_awesome
+                        : Icons.auto_awesome_outlined,
+                  ),
+                  tooltip: 'Constellations',
+                ),
+              ],
             ),
           ),
         ],
@@ -358,17 +350,21 @@ class SkyMapProvider extends ChangeNotifier {
   String get statusLine {
     final position = _position;
     if (position == null) {
-      return 'Determining location...';
+      return 'Determining location…';
     }
 
+    final lat = position.latitude.toStringAsFixed(3);
+    final lon = position.longitude.toStringAsFixed(3);
+
+    final base = 'Lat $lat, Lon $lon';
+
     if (_lastSunAz != null && _lastSunAlt != null) {
-      return 'Lat ${position.latitude.toStringAsFixed(3)}, '
-          'Lon ${position.longitude.toStringAsFixed(3)} · '
-          'Sun az ${_lastSunAz!.toStringAsFixed(0)}°, '
-          'alt ${_lastSunAlt!.toStringAsFixed(0)}° · 10 Hz';
+      final az = _lastSunAz!.toStringAsFixed(0);
+      final alt = _lastSunAlt!.toStringAsFixed(0);
+      return '$base · Sun az $az°, alt $alt° · 10 Hz';
     }
-    return 'Lat ${position.latitude.toStringAsFixed(3)}, '
-        'Lon ${position.longitude.toStringAsFixed(3)} · Unknown sun position · 10 Hz';
+
+    return '$base · Unknown sun position · 10 Hz';
   }
 
   Future<void> initialize() async {
@@ -498,15 +494,17 @@ class SkyMapProvider extends ChangeNotifier {
       LocationErrorHandler.getPositionStreamWithErrorHandling().listen(
         (p) {
           _position = p;
+          // чтобы статус и небо обновились сразу
+          _updateSky();
         },
         onError: (e) {
-          // GPS stream error, but continue
+          // ignore
         },
       );
     } on SkyMapException catch (e) {
       _pendingError = e;
-    } catch (e) {
-      // Ignore GPS errors, app will continue
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -895,8 +893,8 @@ class SkyMapProvider extends ChangeNotifier {
 
     final relAz = ((azimuth - phoneAzimuth + 540) % 360) - 180;
     final relAlt = altitude - phonePitch;
-    const azimuthFov = 180.0; // Full horizontal view
-    const altitudeFov = 180.0; // From horizon to zenith
+    const azimuthFov = 220.0; // шире обзор
+    const altitudeFov = 150.0; // чуть уже по высоте
 
     if (relAz.abs() > azimuthFov || relAlt.abs() > altitudeFov) {
       return null;
