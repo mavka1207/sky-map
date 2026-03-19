@@ -851,18 +851,7 @@ class SkyMapProvider extends ChangeNotifier {
     final elements = OrbitalElements.getPlanetByName(name);
     if (elements != null) {
       final eq = elements.getEquatorialPosition(julian);
-      // Temporary offset for testing - spreading planets across sky
-      final raOffset = switch (name) {
-        'Mercury' => 0.0,
-        'Venus' => 60.0,
-        'Mars' => 120.0,
-        'Jupiter' => 180.0,
-        'Saturn' => 240.0,
-        'Uranus' => 300.0,
-        'Neptune' => 30.0,
-        _ => 0.0,
-      };
-      return ((eq.$1 + raOffset) % 360, eq.$2);
+      return eq;
     }
 
     // Fallback: keep a simple educational placeholder if unknown.
