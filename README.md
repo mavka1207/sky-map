@@ -1,6 +1,6 @@
 # Sky Map
 
-A Flutter app that renders a real-time sky view on a black canvas (updates at ~10 Hz).
+A Flutter app that renders a real-time sky view on a black canvas (updates at ~10 Hz). Works offline with bundled celestial data.
 
 ## Features
 
@@ -9,7 +9,8 @@ A Flutter app that renders a real-time sky view on a black canvas (updates at ~1
   - GPS via `geolocator`
   - Accelerometer + magnetometer via `sensors_plus`
 - **Realtime updates**: object positions recalculated every ~100 ms
-- **Planet details**: mass/gravity fetched from a public API (`le-systeme-solaire`)
+- **Planet details**: complete astronomical data loaded from local JSON asset (`assets/planet_data.json`)
+- **Offline support**: all planet/star data bundled with the app — no internet required
 - **Star field**: curated HIP (Hipparcos) star catalog rendered with spectral-color styling
 - **Constellations**: 15+ constellations rendered as line segments (visibility filtered by location/time)
 - **Orbital mechanics**: planets use a Kepler-based orbital elements model (educational / simplified)
@@ -19,7 +20,7 @@ A Flutter app that renders a real-time sky view on a black canvas (updates at ~1
   - Sun
   - Moon
   - All Solar System planets (Mercury → Neptune)
-- **Interaction**: tap an object to open a bottom sheet with a short description
+- **Interaction**: tap an object to open a bottom sheet with detailed description
 
 ## Run
 
@@ -28,8 +29,15 @@ flutter pub get
 flutter run
 ```
 
+## Data Sources
+
+- **Planets & celestial objects**: bundled JSON asset (`assets/planet_data.json`)
+- **Stars**: Hipparcos (HIP) catalog with spectral classification
+- **Constellations**: IAU constellation boundaries and line patterns
+
 ## Notes
 
 - On Android/iOS you must grant location permissions at the platform level.
-- Android release builds typically need the `INTERNET` permission to fetch planet details from the API.
+- The app works **completely offline** — all astronomical data is bundled with the application.
 - The sky/object coordinate calculations are approximate (educational level), intended for learning and a believable dynamic sky view that responds to time and device orientation.
+- No internet connection is required after installation.
