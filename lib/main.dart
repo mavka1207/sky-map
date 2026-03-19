@@ -274,6 +274,14 @@ class SkyMapProvider extends ChangeNotifier {
   bool showConstellations = true;
   String? selectedConstellationKey;
 
+  // Dynamic FOV system (base values with scale factors)
+  final double _baseAzimuthFov = 260.0;
+  final double _baseAltitudeFov = 150.0;
+  // ignore: prefer_final_fields
+  double _azimuthFovScale = 1.0; // enabled for future gesture-based zoom
+  // ignore: prefer_final_fields
+  double _altitudeFovScale = 1.0; // enabled for future gesture-based zoom
+
   final List<CelestialObject> _catalog = [];
   final List<RenderedObject> _visibleObjects = [];
   final List<RenderedStar> _visibleHipStars = [];
@@ -893,8 +901,8 @@ class SkyMapProvider extends ChangeNotifier {
 
     final relAz = ((azimuth - phoneAzimuth + 540) % 360) - 180;
     final relAlt = altitude - phonePitch;
-    const azimuthFov = 220.0; // шире обзор
-    const altitudeFov = 150.0; // чуть уже по высоте
+    final azimuthFov = _baseAzimuthFov * _azimuthFovScale;
+    final altitudeFov = _baseAltitudeFov * _altitudeFovScale;
 
     if (relAz.abs() > azimuthFov || relAlt.abs() > altitudeFov) {
       return null;
