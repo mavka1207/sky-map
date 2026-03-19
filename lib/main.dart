@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -88,89 +89,21 @@ class SkyMapPage extends StatelessWidget {
             tooltip: 'Night Vision',
           ),
         ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(24),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
             child: Text(
               provider.statusLine,
-              style: const TextStyle(fontSize: 13, color: Colors.white70),
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                const Text(
-                  'Show all planets',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const Spacer(),
-                Switch.adaptive(
-                  value: provider.showAllPlanets,
-                  onChanged: provider.setShowAllPlanets,
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                const Text(
-                  'Show constellations',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const Spacer(),
-                Switch.adaptive(
-                  value: provider.showConstellations,
-                  onChanged: provider.setShowConstellations,
-                ),
-              ],
-            ),
-          ),
-          if (provider.showConstellations)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Row(
-                children: [
-                  const Text(
-                    'Constellation',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        dropdownColor: const Color(0xFF101010),
-                        value: provider.selectedConstellationKey ?? '__all__',
-                        items: [
-                          const DropdownMenuItem<String>(
-                            value: '__all__',
-                            child: Text('All visible'),
-                          ),
-                          ...provider.constellationKeys.map(
-                            (k) => DropdownMenuItem<String>(
-                              value: k,
-                              child: Text(k),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          provider.setSelectedConstellationKey(
-                            value == '__all__' ? null : value,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
+        ),
+      ),
+      body: Stack(
+        children: [
+          // Sky canvas
+          Positioned.fill(
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -231,6 +164,156 @@ class SkyMapPage extends StatelessWidget {
               },
             ),
           ),
+          // Bottom controls panel
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.65),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Show all planets',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Switch.adaptive(
+                        value: provider.showAllPlanets,
+                        onChanged: provider.setShowAllPlanets,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Text(
+                        'Show constellations',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      Switch.adaptive(
+                        value: provider.showConstellations,
+                        onChanged: provider.setShowConstellations,
+                      ),
+                    ],
+                  ),
+                  if (provider.showConstellations) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Text(
+                          'Constellation',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              dropdownColor: const Color(0xFF101010),
+                              value:
+                                  provider.selectedConstellationKey ?? '__all__',
+                              items: [
+                                const DropdownMenuItem<String>(
+                                  value: '__all__',
+                                  child: Text('All visible'),
+                                ),
+                                ...provider.constellationKeys.map(
+                                  (k) => DropdownMenuItem<String>(
+                                    value: k,
+                                    child: Text(k),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (value) {
+                                if (value == null) return;
+                                provider.setSelectedConstellationKey(
+                                  value == '__all__' ? null : value,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          // Right side vertical planets panel
+          Positioned(
+            right: 8,
+            top: 8,
+            bottom: 80,
+            width: 100,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.65),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                children: provider.pickerObjects.map((obj) {
+                  final isSelected = provider.selectedObject?.name == obj.name;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: GestureDetector(
+                      onTap: () => provider.selectByName(obj.name),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? obj.color.withOpacity(0.7)
+                              : Colors.grey.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(6),
+                          border: isSelected
+                              ? Border.all(color: obj.color, width: 2)
+                              : null,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 6,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: obj.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              obj.name,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.white70,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -247,9 +330,11 @@ class SkyMapProvider extends ChangeNotifier {
   Position? _position;
   AccelerometerEvent? _accelerometerEvent;
   MagnetometerEvent? _magnetometerEvent;
+  StreamSubscription<CompassEvent>? _compassSub;
+  double? _headingDegrees;
   Timer? _timer;
 
-  bool showAllPlanets = false;
+  bool showAllPlanets = true;
   bool showConstellations = true;
   String? selectedConstellationKey;
 
@@ -257,6 +342,7 @@ class SkyMapProvider extends ChangeNotifier {
   final List<RenderedObject> _visibleObjects = [];
   final List<RenderedStar> _visibleHipStars = [];
   final List<LineSegment> _constellationLines = [];
+
 
   late final double _baseJulian;
   double? _lastSunAz;
@@ -271,6 +357,8 @@ class SkyMapProvider extends ChangeNotifier {
   double? _cachedJulian;
   double? _cachedLstDegrees;
   DateTime? _lastTimeUpdateUtc;
+  Position? _lastPositionForTimeUpdate;
+  bool _isDeviceStill = false;
 
   RenderedObject? selectedObject;
   SkyMapException? _pendingError;
@@ -332,6 +420,7 @@ class SkyMapProvider extends ChangeNotifier {
     await _initializeSensorsWithHandling();
     await _setupLocation();
     _listenSensors();
+    _listenCompass();
     _timer = Timer.periodic(
       const Duration(milliseconds: 100),
       (_) => _updateSky(),
@@ -469,6 +558,21 @@ class SkyMapProvider extends ChangeNotifier {
     }
   }
 
+  void _listenCompass() {
+    _compassSub?.cancel();
+    try {
+      _compassSub = FlutterCompass.events?.listen((event) {
+        final heading = event.heading;
+        if (heading == null) return;
+        _headingDegrees = (heading % 360 + 360) % 360;
+      });
+    } catch (e) {
+      // If compass isn't available (simulator / device limitations),
+      // the UI will still run but heading will stay at last known value.
+      print('Compass error: $e');
+    }
+  }
+
   void _updateSky() {
     final position = _position;
     if (position == null) {
@@ -476,13 +580,36 @@ class SkyMapProvider extends ChangeNotifier {
       return;
     }
 
-    // Update time-dependent sky coordinates at 1 Hz to avoid visible drift/jitter
-    // when the device is stationary (LST changes continuously).
+    final orientation = _estimateOrientation();
+    final azimuth = orientation.$1;
+    final pitch = orientation.$2;
+
+    // Update time-dependent sky coordinates primarily when the user is moving
+    // the device (or when location changes). This prevents the Sun/sky from
+    // "drifting" while the phone is lying still.
     final nowUtc = DateTime.now().toUtc();
-    final shouldUpdateTime = _lastTimeUpdateUtc == null ||
-        nowUtc.difference(_lastTimeUpdateUtc!).inMilliseconds >= 1000;
-    if (shouldUpdateTime || _cachedJulian == null || _cachedLstDegrees == null) {
+    final lastPos = _lastPositionForTimeUpdate;
+    final movedInGps = lastPos == null
+        ? true
+        : Geolocator.distanceBetween(
+              lastPos.latitude,
+              lastPos.longitude,
+              position.latitude,
+              position.longitude,
+            ) >
+            5.0; // meters
+
+    // Fallback refresh to avoid becoming stale during long sessions.
+    const maxTimeHoldMs = 30000; // 30s
+    final staleByTime = _lastTimeUpdateUtc == null ||
+        nowUtc.difference(_lastTimeUpdateUtc!).inMilliseconds >= maxTimeHoldMs;
+
+    final shouldUpdateTime =
+        _cachedJulian == null || _cachedLstDegrees == null || movedInGps || !_isDeviceStill || staleByTime;
+
+    if (shouldUpdateTime) {
       _lastTimeUpdateUtc = nowUtc;
+      _lastPositionForTimeUpdate = position;
       _cachedJulian = _julianDate(nowUtc);
 
       final gmst =
@@ -492,10 +619,6 @@ class SkyMapProvider extends ChangeNotifier {
     }
     final julian = _cachedJulian!;
     final lstDegrees = _cachedLstDegrees!;
-
-    final orientation = _estimateOrientation();
-    final azimuth = orientation.$1;
-    final pitch = orientation.$2;
 
     _visibleObjects.clear();
     _visibleHipStars.clear();
@@ -528,7 +651,11 @@ class SkyMapProvider extends ChangeNotifier {
           RenderedObject(
             object: object,
             offset: projected,
-            radius: object.type == ObjectType.sun ? 8 : 5,
+            radius: switch (object.type) {
+              ObjectType.sun => 14,
+              ObjectType.moon => 10,
+              ObjectType.planet => 9,
+            },
           ),
         );
       }
@@ -591,6 +718,15 @@ class SkyMapProvider extends ChangeNotifier {
           );
           if (projected != null) {
             projectedStars[i] = projected;
+            // Draw constellation star point.
+            _visibleHipStars.add(
+              RenderedStar(
+                offset: projected,
+                radius: 2.0,
+                color: Colors.white,
+                opacity: 0.85,
+              ),
+            );
           }
         }
 
@@ -608,13 +744,20 @@ class SkyMapProvider extends ChangeNotifier {
 
   (double, double) _estimateOrientation() {
     final a = _accelerometerEvent;
-    final m = _magnetometerEvent;
-    if (a == null || m == null) {
+    if (a == null) {
       return (_smoothAzimuth, _smoothPitch);
     }
 
     final pitch = atan2(-a.x, sqrt((a.y * a.y) + (a.z * a.z))) * 180 / pi;
-    final azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
+    // Prefer OS-fused compass heading; fall back to raw magnetometer if needed.
+    double? azimuth = _headingDegrees;
+    if (azimuth == null && _magnetometerEvent != null) {
+      final m = _magnetometerEvent!;
+      azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
+    }
+    if (azimuth == null) {
+      return (_smoothAzimuth, _smoothPitch);
+    }
 
     // Seed smoothing with the first real sensor reading to avoid a visible
     // "settling" movement right after launch.
@@ -630,8 +773,8 @@ class SkyMapProvider extends ChangeNotifier {
     // Magnetometer/accelerometer data is noisy even when the device is still.
     // Apply a small deadband and "stillness" gating to prevent visible jitter.
     const deadbandDeg = 0.35; // ignore tiny changes
-    const stillRawDeg = 0.20; // considered "still" if raw changes stay under this
-    const stillFramesToFreeze = 12; // ~1.2s at 10Hz
+    const stillRawDeg = 0.25; // considered "still" if raw changes stay under this
+    const stillFramesToFreeze = 8; // ~0.8s at 10Hz
 
     final prevRawAz = _lastRawAzimuth ?? azimuth;
     final prevRawPitch = _lastRawPitch ?? pitch;
@@ -648,8 +791,10 @@ class SkyMapProvider extends ChangeNotifier {
     }
 
     if (_stillCounter >= stillFramesToFreeze) {
+      _isDeviceStill = true;
       return (_smoothAzimuth, _smoothPitch);
     }
+    _isDeviceStill = false;
 
     // Stronger smoothing than before to reduce jitter.
     const alpha = 0.06;
@@ -840,6 +985,7 @@ class SkyMapProvider extends ChangeNotifier {
   @override
   void dispose() {
     _timer?.cancel();
+    _compassSub?.cancel();
     super.dispose();
   }
 }

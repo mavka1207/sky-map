@@ -231,7 +231,7 @@ class LocationErrorHandler {
     return Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 10, // Update every 10 meters
+        distanceFilter: 1, // Update on ~1 meter movement
       ),
     ).handleError((e) {
       print('❌ Location stream error: $e');
