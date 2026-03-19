@@ -720,6 +720,30 @@ class SkyMapProvider extends ChangeNotifier {
       }
     }
 
+    // Auto-adjust FOV based on planet clustering
+    final planetPoints = _visibleObjects
+        .where((o) => o.object.type == ObjectType.planet)
+        .map((o) => o.offset)
+        .toList();
+
+    if (planetPoints.length >= 2) {
+      double sum = 0;
+      int cnt = 0;
+      for (var i = 0; i < planetPoints.length; i++) {
+        for (var j = i + 1; j < planetPoints.length; j++) {
+          sum += (planetPoints[i] - planetPoints[j]).distance;
+          cnt++;
+        }
+      }
+      final avgDist = sum / cnt;
+
+      if (avgDist < 0.12) {
+        _azimuthFovScale = 1.2; // planets clustered → zoom out
+      } else if (avgDist > 0.2) {
+        _azimuthFovScale = 1.0; // planets spread → normal zoom
+      }
+    }
+
     notifyListeners();
   }
 
