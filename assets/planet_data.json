@@ -3,6 +3,7 @@
     {
       "name": "Mercury",
       "type": "terrestrial",
+      "color": "#FF1493",
       "mass": 3.3011e23,
       "diameter": 3879.73,
       "density": 5.427,
@@ -16,6 +17,7 @@
     {
       "name": "Venus",
       "type": "terrestrial",
+      "color": "#FFFF00",
       "mass": 4.8673e24,
       "diameter": 12103.6,
       "density": 5.243,
@@ -29,6 +31,7 @@
     {
       "name": "Earth",
       "type": "terrestrial",
+      "color": "#00FF00",
       "mass": 5.972e24,
       "diameter": 12742,
       "density": 5.514,
@@ -42,6 +45,7 @@
     {
       "name": "Mars",
       "type": "terrestrial",
+      "color": "#FF0000",
       "mass": 6.4169e23,
       "diameter": 6779,
       "density": 3.933,
@@ -55,6 +59,7 @@
     {
       "name": "Jupiter",
       "type": "gasgiant",
+      "color": "#FF8C00",
       "mass": 1.898e27,
       "diameter": 139820,
       "density": 1.326,
@@ -68,6 +73,7 @@
     {
       "name": "Saturn",
       "type": "gasgiant",
+      "color": "#FFD700",
       "mass": 5.6832e26,
       "diameter": 116460,
       "density": 0.687,
@@ -81,6 +87,7 @@
     {
       "name": "Uranus",
       "type": "icegiant",
+      "color": "#00FFFF",
       "mass": 8.6810e25,
       "diameter": 50724,
       "density": 1.27,
@@ -94,6 +101,7 @@
     {
       "name": "Neptune",
       "type": "icegiant",
+      "color": "#0033FF",
       "mass": 1.02409e26,
       "diameter": 49244,
       "density": 1.638,
@@ -103,29 +111,31 @@
       "orbitalPeriod": 60182,
       "meanSurfaceTemperature": 72,
       "description": "The windiest planet in the solar system. Home to the fastest wind speeds recorded."
-    },
-    {
-      "name": "Sun",
-      "type": "star",
-      "mass": 1.989e30,
-      "diameter": 1391000,
-      "density": 1.409,
-      "gravity": 274,
-      "escapeVelocity": 617.5,
-      "meanSurfaceTemperature": 5778,
-      "description": "The star at the center of our solar system. Its gravity keeps all planets in orbit."
-    },
-    {
-      "name": "Moon",
-      "type": "satellite",
-      "mass": 7.342e22,
-      "diameter": 3474.2,
-      "density": 3.344,
-      "gravity": 1.62,
-      "escapeVelocity": 2.38,
-      "meanDistanceFromEarth": 384400,
-      "orbitalPeriod": 27.32,
-      "description": "Earth's natural satellite. Responsible for tides and stabilizing Earth's axial tilt."
     }
-  ]
+  ],
+  "sun": {
+    "name": "Sun",
+    "type": "star",
+    "color": "#FFFF00",
+    "mass": 1.989e30,
+    "diameter": 1391000,
+    "density": 1.409,
+    "gravity": 274,
+    "escapeVelocity": 617.5,
+    "meanSurfaceTemperature": 5778,
+    "description": "The star at the center of our solar system. Its gravity keeps all planets in orbit."
+  },
+  "moon": {
+    "name": "Moon",
+    "type": "satellite",
+    "color": "#FFFFFF",
+    "mass": 7.342e22,
+    "diameter": 3474.2,
+    "density": 3.344,
+    "gravity": 1.62,
+    "escapeVelocity": 2.38,
+    "meanDistanceFromEarth": 384400,
+    "orbitalPeriod": 27.32,
+    "description": "Earth's natural satellite. Responsible for tides and stabilizing Earth's axial tilt."
+  }
 }
