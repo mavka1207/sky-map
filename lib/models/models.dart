@@ -203,7 +203,7 @@ class SkyState {
       visibleObjects: visibleObjects ?? this.visibleObjects,
       visibleHipStars: visibleHipStars ?? this.visibleHipStars,
       constellationLines: constellationLines ?? this.constellationLines,
-      selectedObject: selectedObject,
+      selectedObject: selectedObject ?? this.selectedObject,
       dateTimeUtc: dateTimeUtc ?? this.dateTimeUtc,
       julianDate: julianDate ?? this.julianDate,
       lstDegrees: lstDegrees ?? this.lstDegrees,

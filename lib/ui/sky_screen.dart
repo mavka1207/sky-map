@@ -116,6 +116,8 @@ class _SkyScreenState extends State<SkyScreen> {
                       constellations: provider.constellations,
                       state: provider.state,
                       nightVisionMode: widget.nightVisionMode,
+                      azimuthFovScale: provider.azimuthFovScale,
+                      altitudeFovScale: provider.altitudeFovScale,
                     ),
                     child: Container(),
                   ),

@@ -14,6 +14,8 @@ class SkyPainter extends CustomPainter {
   final SkyState state;
   final String? selectedObjectName;
   final bool nightVisionMode;
+  final double azimuthFovScale;
+  final double altitudeFovScale;
 
   SkyPainter(
     this.objects,
@@ -22,6 +24,8 @@ class SkyPainter extends CustomPainter {
     this.constellations = const [],
     required this.state,
     this.nightVisionMode = false,
+    this.azimuthFovScale = 1.0,
+    this.altitudeFovScale = 1.0,
   });
 
   @override
@@ -99,16 +103,24 @@ class SkyPainter extends CustomPainter {
     }
   }
 
-  /// Project star from azimuth/altitude to screen coordinates.
-  /// Relative azimuth is calculated based on device heading.
+  /// Project star from azimuth/altitude to screen coordinates with FOV scaling.
+  /// FOV-scale affects the angular width of the visible sky.
   Offset? _projectStar(double az, double alt, Size size) {
-    // Calculate relative azimuth from device heading
+    // Get effective FOV (scaled by pinch-zoom)
+    const baseAzimuthFov = 260.0;
+    const baseAltitudeFov = 150.0;
+    final fovAz = baseAzimuthFov * azimuthFovScale;
+    final fovAlt = baseAltitudeFov * altitudeFovScale;
+
+    // Calculate relative azimuth/altitude from device heading/pitch
     final relAz = (az - state.heading + 360) % 360;
     final relAlt = alt - state.pitch;
 
-    // Simple cylindrical projection: az -> x, alt -> y
-    final x = (relAz / 360.0) * size.width;
-    final y = size.height / 2 - (relAlt / 90.0) * (size.height / 2);
+    // Projection: map FOV range to screen coordinates
+    // x: azimuth (0-360 degrees -> array width)
+    // y: altitude (-90 to +90 degrees -> screen height)
+    final x = (relAz / fovAz + 0.5) * size.width;
+    final y = size.height / 2 - (relAlt / fovAlt) * (size.height / 2);
 
     // Check if within visible bounds (with some margin)
     const margin = 50.0;
@@ -233,5 +245,7 @@ class SkyPainter extends CustomPainter {
       oldDelegate.constellations != constellations ||
       oldDelegate.state.heading != state.heading ||
       oldDelegate.state.pitch != state.pitch ||
-      oldDelegate.nightVisionMode != nightVisionMode;
+      oldDelegate.nightVisionMode != nightVisionMode ||
+      oldDelegate.azimuthFovScale != azimuthFovScale ||
+      oldDelegate.altitudeFovScale != altitudeFovScale;
 }

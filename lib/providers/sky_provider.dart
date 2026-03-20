@@ -62,6 +62,7 @@ class SkyProvider extends ChangeNotifier {
   DateTime? _lastTimeUpdateUtc;
   Position? _lastPositionForTimeUpdate;
   late final double _baseJulian;
+  bool _hasLocation = false;
 
   // FOV scaling (with zoom constraints)
   final double baseAzimuthFov = 260.0;
@@ -252,6 +253,7 @@ class SkyProvider extends ChangeNotifier {
           latitude: position.latitude,
           longitude: position.longitude,
         );
+        _hasLocation = true;
         notifyListeners();
 
         _posSub = Geolocator.getPositionStream().listen((pos) {
@@ -259,6 +261,7 @@ class SkyProvider extends ChangeNotifier {
             latitude: pos.latitude,
             longitude: pos.longitude,
           );
+          _hasLocation = true;
           _updateSky();
         });
       }
@@ -288,8 +291,8 @@ class SkyProvider extends ChangeNotifier {
   }
 
   void _updateSky() {
-    final position = _state.latitude;
-    if (position == 0 && _state.longitude == 0) return;
+    // Skip if location not yet determined
+    if (!_hasLocation) return;
 
     final orientation = _estimateOrientation();
     final azimuth = orientation.$1;
