@@ -113,27 +113,6 @@ class RenderedStar {
       offset.hashCode ^ radius.hashCode ^ color.hashCode ^ opacity.hashCode;
 }
 
-/// A line connecting two constellation stars.
-class LineSegment {
-  final Offset start;
-  final Offset end;
-  final String constellation;
-
-  LineSegment(this.start, this.end, this.constellation);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LineSegment &&
-          runtimeType == other.runtimeType &&
-          start == other.start &&
-          end == other.end &&
-          constellation == other.constellation;
-
-  @override
-  int get hashCode => start.hashCode ^ end.hashCode ^ constellation.hashCode;
-}
-
 /// A constellation with its component stars and connections.
 class Constellation {
   final String id;
@@ -159,7 +138,6 @@ class SkyState {
   final double pitch; // device pitch in degrees
   final List<RenderedObject> visibleObjects;
   final List<RenderedStar> visibleHipStars;
-  final List<LineSegment> constellationLines;
   final CelestialObject? selectedObject;
   final DateTime dateTimeUtc;
   final double julianDate;
@@ -173,7 +151,6 @@ class SkyState {
     required this.pitch,
     required this.visibleObjects,
     required this.visibleHipStars,
-    required this.constellationLines,
     this.selectedObject,
     required this.dateTimeUtc,
     required this.julianDate,
@@ -188,7 +165,6 @@ class SkyState {
     double? pitch,
     List<RenderedObject>? visibleObjects,
     List<RenderedStar>? visibleHipStars,
-    List<LineSegment>? constellationLines,
     CelestialObject? selectedObject,
     DateTime? dateTimeUtc,
     double? julianDate,
@@ -202,7 +178,6 @@ class SkyState {
       pitch: pitch ?? this.pitch,
       visibleObjects: visibleObjects ?? this.visibleObjects,
       visibleHipStars: visibleHipStars ?? this.visibleHipStars,
-      constellationLines: constellationLines ?? this.constellationLines,
       selectedObject: selectedObject ?? this.selectedObject,
       dateTimeUtc: dateTimeUtc ?? this.dateTimeUtc,
       julianDate: julianDate ?? this.julianDate,

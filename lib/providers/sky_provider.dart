@@ -13,7 +13,6 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:convert';
 
-import 'package:sky_map/models/constellation_data.dart';
 import 'package:sky_map/models/hip_star_catalog.dart';
 import 'package:sky_map/models/models.dart';
 import 'package:sky_map/models/sky_calculator.dart';
@@ -26,7 +25,6 @@ class SkyProvider extends ChangeNotifier {
     pitch: 0,
     visibleObjects: [],
     visibleHipStars: [],
-    constellationLines: [],
     dateTimeUtc: DateTime.now().toUtc(),
     julianDate: 0,
     lstDegrees: 0,
@@ -348,7 +346,6 @@ class SkyProvider extends ChangeNotifier {
 
     final visibleObjects = <RenderedObject>[];
     final visibleHipStars = <RenderedStar>[];
-    final constellationLines = <LineSegment>[];
 
     // Render celestial objects
     for (final object in _catalog) {
@@ -420,101 +417,6 @@ class SkyProvider extends ChangeNotifier {
       );
     }
 
-    // Constellations
-    if (showConstellations) {
-      final List<ConstellationInfo> constellations;
-      final selectedKey = selectedConstellationKey;
-      if (selectedKey != null) {
-        final selected = ConstellationCatalog.getConstellation(selectedKey);
-        constellations = selected == null ? const [] : [selected];
-      } else {
-        constellations = ConstellationCatalog.getVisibleConstellations(
-          _state.latitude,
-          lstDegrees,
-        );
-      }
-
-      for (final c in constellations) {
-        final projectedStars = <int, Offset>{};
-        for (var i = 0; i < c.stars.length; i++) {
-          final star = c.stars[i];
-          final projected = SkyCalculator.projectStar(
-            star.ra,
-            star.dec,
-            _state.latitude,
-            lstDegrees,
-            azimuth,
-            pitch,
-            baseAzimuthFov,
-            baseAltitudeFov,
-            azimuthFovScale,
-            altitudeFovScale,
-          );
-          if (projected != null) {
-            projectedStars[i] = projected;
-            visibleHipStars.add(
-              RenderedStar(
-                offset: projected,
-                radius: 2.0,
-                color: const Color(0xFFFFFFFF),
-                opacity: 0.85,
-              ),
-            );
-          }
-        }
-
-        for (final line in c.lines) {
-          final a = projectedStars[line.starIndex1];
-          final b = projectedStars[line.starIndex2];
-          if (a == null || b == null) continue;
-          constellationLines.add(LineSegment(a, b, c.englishName));
-        }
-      }
-
-      // Load custom constellations from JSON
-      for (final constellation in _constellations) {
-        final projectedStars = <int, Offset>{};
-
-        for (var i = 0; i < constellation.stars.length; i++) {
-          final star = constellation.stars[i];
-          // Project using Az/Alt directly
-          final projected = SkyCalculator.projectToScreen(
-            star.az,
-            star.alt,
-            azimuth,
-            pitch,
-            baseAzimuthFov,
-            baseAltitudeFov,
-            azimuthFovScale,
-            altitudeFovScale,
-            allowBelowHorizon: true,
-          );
-
-          if (projected != null) {
-            projectedStars[i] = projected;
-            visibleHipStars.add(
-              RenderedStar(
-                offset: projected,
-                radius: 2.5,
-                color: const Color(0xFFFFFFFF),
-                opacity: 0.9,
-              ),
-            );
-          }
-        }
-
-        // Draw lines between connected stars
-        for (final connection in constellation.connections) {
-          final startIdx = connection[0];
-          final endIdx = connection[1];
-          final a = projectedStars[startIdx];
-          final b = projectedStars[endIdx];
-          if (a == null || b == null) continue;
-          constellationLines.add(LineSegment(a, b, constellation.name));
-        }
-      }
-    }
-
     // Auto-FOV based on planet clustering
     final planetPoints = visibleObjects
         .where((o) => o.object.type == 'planet')
@@ -544,7 +446,6 @@ class SkyProvider extends ChangeNotifier {
       pitch: pitch,
       visibleObjects: visibleObjects,
       visibleHipStars: visibleHipStars,
-      constellationLines: constellationLines,
       dateTimeUtc: nowUtc,
       julianDate: julian,
       lstDegrees: lstDegrees,
