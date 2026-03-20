@@ -61,9 +61,11 @@ class SkyProvider extends ChangeNotifier {
   Position? _lastPositionForTimeUpdate;
   late final double _baseJulian;
 
-  // FOV scaling
+  // FOV scaling (with zoom constraints)
   final double baseAzimuthFov = 260.0;
   final double baseAltitudeFov = 150.0;
+  static const double _minFovScale = 0.5; // Max zoom in
+  static const double _maxFovScale = 3.0; // Max zoom out
   double azimuthFovScale = 1.0;
   double altitudeFovScale = 1.0;
 
@@ -531,6 +533,23 @@ class SkyProvider extends ChangeNotifier {
 
   void setSelectedConstellation(String? key) {
     selectedConstellationKey = key;
+    notifyListeners();
+  }
+
+  /// Update FOV scale factors via pinch-zoom gesture.
+  /// [scaleFactorDelta] is the change in pinch scale (1.0 = no change).
+  void updateFovScale(double scaleFactorDelta) {
+    // Invert: pinch-in (scale < 1) zooms in (expands view), pinch-out (scale > 1) zooms out
+    final newScale = azimuthFovScale / scaleFactorDelta;
+    azimuthFovScale = newScale.clamp(_minFovScale, _maxFovScale);
+    altitudeFovScale = newScale.clamp(_minFovScale, _maxFovScale);
+    notifyListeners();
+  }
+
+  /// Reset FOV to 1.0 (normal zoom).
+  void resetFovScale() {
+    azimuthFovScale = 1.0;
+    altitudeFovScale = 1.0;
     notifyListeners();
   }
 

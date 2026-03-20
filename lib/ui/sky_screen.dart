@@ -104,6 +104,10 @@ class _SkyScreenState extends State<SkyScreen> {
                       },
                     );
                   },
+                  onScaleUpdate: (details) {
+                    // Pinch-zoom: update FOV scale based on pinch distance
+                    provider.updateFovScale(details.scale);
+                  },
                   child: CustomPaint(
                     painter: SkyPainter(
                       provider.state.visibleObjects,
