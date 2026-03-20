@@ -55,17 +55,11 @@ class SkyPainter extends CustomPainter {
       final isSelected = item.object.name == selectedObjectName;
       final baseColor = item.object.color;
       final center = _scale(item.offset, size);
-
-      // Glow effect
-      final glowPaint = Paint()
-        ..color = baseColor.withOpacity(isSelected ? 0.9 : 0.6)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
-      canvas.drawCircle(center, item.radius * 2.4, glowPaint);
-
-      // Object circle
-      final paint = Paint()..color = baseColor;
       final radius = isSelected ? item.radius * 1.8 : item.radius;
-      canvas.drawCircle(center, radius, paint);
+
+      // Render planet with glow and 3D sphere effect
+      _drawGlow(canvas, center, radius, baseColor);
+      _drawPlanet(canvas, center, radius, baseColor);
 
       // Label
       final textPainter = TextPainter(
@@ -109,6 +103,49 @@ class SkyPainter extends CustomPainter {
       );
       textPainter.paint(canvas, labelRect.topLeft);
     }
+  }
+
+  /// Draw atmospheric glow/halo around celestial body
+  void _drawGlow(Canvas canvas, Offset center, double radius, Color color) {
+    final glowRadius = radius * 1.8;
+    final rect = Rect.fromCircle(center: center, radius: glowRadius);
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withOpacity(0.4),
+          color.withOpacity(0.1),
+          color.withOpacity(0.0),
+        ],
+        stops: const [0.0, 0.6, 1.0],
+      ).createShader(rect);
+
+    canvas.drawCircle(center, glowRadius, glowPaint);
+  }
+
+  /// Draw planet with 3D sphere effect using radial gradient
+  void _drawPlanet(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color baseColor,
+  ) {
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final gradient = RadialGradient(
+      colors: [
+        baseColor.withOpacity(0.1), // dark side / shadow
+        baseColor, // main color
+        Colors.white.withOpacity(0.8), // bright side (sun-lit)
+      ],
+      stops: const [0.0, 0.6, 1.0],
+      center: const Alignment(-0.4, -0.4), // light from top-left
+      radius: 0.95,
+    );
+
+    final paint = Paint()..shader = gradient.createShader(rect);
+
+    canvas.drawCircle(center, radius, paint);
   }
 
   /// Scale normalized coordinates (-1 to 1) to screen coordinates.

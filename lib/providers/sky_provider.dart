@@ -141,14 +141,14 @@ class SkyProvider extends ChangeNotifier {
 
   void _loadDefaultPlanets() {
     const defaultPlanets = [
-      ('Mercury', '#8C7853'), // grayish-brown - серо-коричневый
-      ('Venus', '#FFC649'), // pale yellow-orange - бледный жёлто-оранжевый
-      ('Earth', '#4A90E2'), // ocean blue - голубой (благодаря морям)
-      ('Mars', '#E27B58'), // rusty red-orange - ржавый красно-оранжевый
-      ('Jupiter', '#C88B3A'), // tan/brown with bands - палевый/коричневый
-      ('Saturn', '#FAD5A5'), // pale sandy - бледный песочный
-      ('Uranus', '#4FD0E7'), // pale cyan-blue - бледный голубой
-      ('Neptune', '#4166F5'), // deep blue - глубокий синий
+      ('Mercury', '#9B8B7E'), // medium brown - более видимый коричневый
+      ('Venus', '#FFD700'), // bright golden yellow - яркий золотистый
+      ('Earth', '#5BA3E8'), // brighter sky blue - яркий голубой
+      ('Mars', '#E85D4F'), // brighter rust red - яркий ржавый
+      ('Jupiter', '#D4A76A'), // brighter tan - яркий палевый
+      ('Saturn', '#FFE5B4'), // brighter sandy - яркий песочный
+      ('Uranus', '#5DDDE6'), // brighter cyan - яркий бирюзовый
+      ('Neptune', '#5080FF'), // brighter blue - яркий синий
     ];
 
     for (final (name, color) in defaultPlanets) {
@@ -167,8 +167,8 @@ class SkyProvider extends ChangeNotifier {
         name: 'Sun',
         type: ObjectType.sun,
         color: _colorFromString(
-          '#FDB813',
-        ), // warm yellow-orange - тёплый жёлто-оранжевый
+          '#FFD700',
+        ), // bright golden yellow - яркий золотистый
         baseDescription: 'The Sun is at the center of our solar system.',
       ),
     );
@@ -177,7 +177,7 @@ class SkyProvider extends ChangeNotifier {
       CelestialObject(
         name: 'Moon',
         type: ObjectType.moon,
-        color: _colorFromString('#D3D3D3'), // light gray - светло-серый
+        color: _colorFromString('#E0E0E0'), // lighter gray - светлый серый
         baseDescription: 'The Moon orbits Earth.',
       ),
     );

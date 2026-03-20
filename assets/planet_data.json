@@ -3,7 +3,7 @@
     {
       "name": "Mercury",
       "type": "terrestrial",
-      "color": "#8C7853",
+      "color": "#9B8B7E",
       "mass": 3.3011e23,
       "diameter": 3879.73,
       "density": 5.427,
@@ -17,7 +17,7 @@
     {
       "name": "Venus",
       "type": "terrestrial",
-      "color": "#FFC649",
+      "color": "#FFD700",
       "mass": 4.8673e24,
       "diameter": 12103.6,
       "density": 5.243,
@@ -31,7 +31,7 @@
     {
       "name": "Earth",
       "type": "terrestrial",
-      "color": "#4A90E2",
+      "color": "#5BA3E8",
       "mass": 5.972e24,
       "diameter": 12742,
       "density": 5.514,
@@ -45,7 +45,7 @@
     {
       "name": "Mars",
       "type": "terrestrial",
-      "color": "#E27B58",
+      "color": "#E85D4F",
       "mass": 6.4169e23,
       "diameter": 6779,
       "density": 3.933,
@@ -59,7 +59,7 @@
     {
       "name": "Jupiter",
       "type": "gasgiant",
-      "color": "#C88B3A",
+      "color": "#D4A76A",
       "mass": 1.898e27,
       "diameter": 139820,
       "density": 1.326,
@@ -73,7 +73,7 @@
     {
       "name": "Saturn",
       "type": "gasgiant",
-      "color": "#FAD5A5",
+      "color": "#FFE5B4",
       "mass": 5.6832e26,
       "diameter": 116460,
       "density": 0.687,
@@ -87,7 +87,7 @@
     {
       "name": "Uranus",
       "type": "icegiant",
-      "color": "#4FD0E7",
+      "color": "#5DDDE6",
       "mass": 8.6810e25,
       "diameter": 50724,
       "density": 1.27,
@@ -101,7 +101,7 @@
     {
       "name": "Neptune",
       "type": "icegiant",
-      "color": "#4166F5",
+      "color": "#5080FF",
       "mass": 1.02409e26,
       "diameter": 49244,
       "density": 1.638,
@@ -116,7 +116,7 @@
   "sun": {
     "name": "Sun",
     "type": "star",
-    "color": "#FDB813",
+    "color": "#FFD700",
     "mass": 1.989e30,
     "diameter": 1391000,
     "density": 1.409,
@@ -128,7 +128,7 @@
   "moon": {
     "name": "Moon",
     "type": "satellite",
-    "color": "#D3D3D3",
+    "color": "#E0E0E0",
     "mass": 7.342e22,
     "diameter": 3474.2,
     "density": 3.344,
