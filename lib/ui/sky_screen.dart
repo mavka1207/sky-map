@@ -111,7 +111,6 @@ class _SkyScreenState extends State<SkyScreen> {
                   child: CustomPaint(
                     painter: SkyPainter(
                       provider.state.visibleObjects,
-                      provider.state.constellationLines,
                       provider.state.selectedObject?.name,
                       hipStars: provider.state.visibleHipStars,
                       constellations: provider.constellations,

@@ -10,7 +10,6 @@ import 'package:sky_map/models/models.dart';
 class SkyPainter extends CustomPainter {
   final List<RenderedObject> objects;
   final List<RenderedStar> hipStars;
-  final List<LineSegment> constellationLines;
   final List<Constellation> constellations;
   final SkyState state;
   final String? selectedObjectName;
@@ -18,7 +17,6 @@ class SkyPainter extends CustomPainter {
 
   SkyPainter(
     this.objects,
-    this.constellationLines,
     this.selectedObjectName, {
     this.hipStars = const [],
     this.constellations = const [],
@@ -40,19 +38,7 @@ class SkyPainter extends CustomPainter {
       canvas.drawCircle(_scale(star.offset, size), star.radius, starPaint);
     }
 
-    // Constellation lines (pre-computed from provider)
-    final linePaint = Paint()
-      ..color = Colors.white38
-      ..strokeWidth = 2;
-    for (final line in constellationLines) {
-      canvas.drawLine(
-        _scale(line.start, size),
-        _scale(line.end, size),
-        linePaint,
-      );
-    }
-
-    // Custom constellation lines with wrap-around check (projected every frame)
+    // Constellation lines with wrap-around check (projected every frame)
     _drawConstellations(canvas, size);
 
     final placedLabelRects = <Rect>[];
@@ -244,7 +230,6 @@ class SkyPainter extends CustomPainter {
       oldDelegate.selectedObjectName != selectedObjectName ||
       oldDelegate.objects != objects ||
       oldDelegate.hipStars != hipStars ||
-      oldDelegate.constellationLines != constellationLines ||
       oldDelegate.constellations != constellations ||
       oldDelegate.state.heading != state.heading ||
       oldDelegate.state.pitch != state.pitch ||
