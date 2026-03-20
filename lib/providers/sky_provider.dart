@@ -81,116 +81,79 @@ class SkyProvider extends ChangeNotifier {
 
   Future<void> initialize() async {
     _baseJulian = SkyCalculator.calculateJulianDate(DateTime.now().toUtc());
-    await _loadPlanetDescriptionsFromJson();
+    await _loadCelestialObjects();
     await _initLocation();
     _listenSensors();
     _startUpdateTimer();
   }
 
-  Future<void> _loadPlanetDescriptionsFromJson() async {
+  /// Load celestial objects (planets, sun, moon) from JSON with Az/Alt coordinates
+  Future<void> _loadCelestialObjects() async {
     try {
-      final jsonString = await rootBundle.loadString('assets/planet_data.json');
+      final jsonString = await rootBundle.loadString(
+        'assets/celestial_objects.json',
+      );
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      final planets = data['planets'] as List? ?? [];
-      for (final p in planets) {
-        _catalog.add(
-          CelestialObject(
-            name: p['name'] as String,
-            type: ObjectType.planet,
-            color: _colorFromString(
-              p['color'] as String? ?? '#FFFF00',
-            ), // yellow fallback
-            baseDescription: p['description'] as String? ?? 'A planet',
-            displayRadius: ((p['radius'] as num?) ?? 10).toDouble(),
-            screenOffset: _computeJitter(p['name'] as String),
-          ),
-        );
-      }
-
+      // Load Sun
       if (data['sun'] != null) {
         final sun = data['sun'] as Map<String, dynamic>;
         _catalog.add(
           CelestialObject(
+            id: sun['id'] as String? ?? 'sun',
             name: sun['name'] as String? ?? 'Sun',
-            type: ObjectType.sun,
-            color: _colorFromString(
-              sun['color'] as String? ?? '#FFFF00',
-            ), // yellow
-            baseDescription: sun['description'] as String? ?? 'The Sun',
-            displayRadius: ((sun['radius'] as num?) ?? 12).toDouble(),
-            screenOffset: _computeJitter(sun['name'] as String? ?? 'Sun'),
+            type: 'sun',
+            description: sun['description'] as String? ?? 'The Sun',
+            az: (sun['az'] as num?)?.toDouble() ?? 0.0,
+            alt: (sun['alt'] as num?)?.toDouble() ?? 0.0,
+            color: _colorFromString(sun['color'] as String? ?? '#FFD700'),
+            displayRadius: (sun['radius'] as num?)?.toDouble() ?? 12.0,
+            screenOffset: _computeJitter(sun['id'] as String? ?? 'sun'),
           ),
         );
       }
 
+      // Load Moon
       if (data['moon'] != null) {
         final moon = data['moon'] as Map<String, dynamic>;
         _catalog.add(
           CelestialObject(
+            id: moon['id'] as String? ?? 'moon',
             name: moon['name'] as String? ?? 'Moon',
-            type: ObjectType.moon,
-            color: _colorFromString(
-              moon['color'] as String? ?? '#FFFFFF',
-            ), // white fallback
-            baseDescription: moon['description'] as String? ?? 'The Moon',
-            displayRadius: ((moon['radius'] as num?) ?? 8).toDouble(),
-            screenOffset: _computeJitter(moon['name'] as String? ?? 'Moon'),
+            type: 'moon',
+            description: moon['description'] as String? ?? 'The Moon',
+            az: (moon['az'] as num?)?.toDouble() ?? 0.0,
+            alt: (moon['alt'] as num?)?.toDouble() ?? 0.0,
+            color: _colorFromString(moon['color'] as String? ?? '#E0E0E0'),
+            displayRadius: (moon['radius'] as num?)?.toDouble() ?? 8.0,
+            screenOffset: _computeJitter(moon['id'] as String? ?? 'moon'),
           ),
         );
       }
+
+      // Load Planets
+      final planets = data['planets'] as List? ?? [];
+      for (final p in planets) {
+        final id = p['id'] as String;
+        _catalog.add(
+          CelestialObject(
+            id: id,
+            name: p['name'] as String? ?? 'Unknown',
+            type: 'planet',
+            description: p['description'] as String? ?? 'A planet',
+            az: (p['az'] as num?)?.toDouble() ?? 0.0,
+            alt: (p['alt'] as num?)?.toDouble() ?? 0.0,
+            color: _colorFromString(p['color'] as String? ?? '#4A90E2'),
+            displayRadius: (p['radius'] as num?)?.toDouble() ?? 10.0,
+            screenOffset: _computeJitter(id),
+          ),
+        );
+      }
+
+      if (kDebugMode) print('Loaded ${_catalog.length} celestial objects');
     } catch (e) {
       if (kDebugMode) print('Failed to load celestial objects: $e');
-      _loadDefaultPlanets();
     }
-  }
-
-  void _loadDefaultPlanets() {
-    const defaultPlanets = [
-      ('Mercury', '#9B8B7E', 6.0), // medium brown
-      ('Venus', '#FFD700', 8.0), // bright golden yellow
-      ('Earth', '#5BA3E8', 8.0), // brighter sky blue
-      ('Mars', '#E85D4F', 6.0), // brighter rust red
-      ('Jupiter', '#D4A76A', 16.0), // brighter tan - largest
-      ('Saturn', '#FFE5B4', 15.0), // brighter sandy
-      ('Uranus', '#5DDDE6', 12.0), // brighter cyan
-      ('Neptune', '#5080FF', 12.0), // brighter blue
-    ];
-
-    for (final (name, color, radius) in defaultPlanets) {
-      _catalog.add(
-        CelestialObject(
-          name: name,
-          type: ObjectType.planet,
-          color: _colorFromString(color),
-          baseDescription: '$name is a planet in our solar system.',
-          displayRadius: radius,
-          screenOffset: _computeJitter(name),
-        ),
-      );
-    }
-
-    _catalog.add(
-      CelestialObject(
-        name: 'Sun',
-        type: ObjectType.sun,
-        color: _colorFromString('#FFD700'),
-        baseDescription: 'The Sun is at the center of our solar system.',
-        displayRadius: 12.0,
-        screenOffset: _computeJitter('Sun'),
-      ),
-    );
-
-    _catalog.add(
-      CelestialObject(
-        name: 'Moon',
-        type: ObjectType.moon,
-        color: _colorFromString('#E0E0E0'),
-        baseDescription: 'The Moon orbits Earth.',
-        displayRadius: 8.0,
-        screenOffset: _computeJitter('Moon'),
-      ),
-    );
   }
 
   Color _colorFromString(String hexColor) {
@@ -347,7 +310,7 @@ class SkyProvider extends ChangeNotifier {
         baseAltitudeFov,
         azimuthFovScale,
         altitudeFovScale,
-        allowBelowHorizon: showAllPlanets && object.type == ObjectType.planet,
+        allowBelowHorizon: showAllPlanets && object.type == 'planet',
       );
 
       if (projected != null) {
@@ -448,7 +411,7 @@ class SkyProvider extends ChangeNotifier {
 
     // Auto-FOV based on planet clustering
     final planetPoints = visibleObjects
-        .where((o) => o.object.type == ObjectType.planet)
+        .where((o) => o.object.type == 'planet')
         .map((o) => o.offset)
         .toList();
 

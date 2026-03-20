@@ -57,8 +57,7 @@ class SkyPainter extends CustomPainter {
       var center = _scale(item.offset, size);
 
       // Apply deterministic jitter offset for planets (visual variety)
-      if (item.object.type == ObjectType.planet ||
-          item.object.type == ObjectType.moon) {
+      if (item.object.type == 'planet' || item.object.type == 'moon') {
         center += item.object.screenOffset;
       }
 
@@ -79,15 +78,10 @@ class SkyPainter extends CustomPainter {
 
       const gap = 4.0;
       Offset labelOffset = switch (item.object.type) {
-        ObjectType.sun => Offset(
-          -(radius + gap + textPainter.width),
-          radius + gap,
-        ),
-        ObjectType.moon => Offset(radius + gap, radius + gap),
-        ObjectType.planet => Offset(
-          radius + gap,
-          -radius - gap - textPainter.height,
-        ),
+        'sun' => Offset(-(radius + gap + textPainter.width), radius + gap),
+        'moon' => Offset(radius + gap, radius + gap),
+        'planet' => Offset(radius + gap, -radius - gap - textPainter.height),
+        _ => Offset(radius + gap, radius + gap),
       };
 
       Rect labelRect = (center + labelOffset) & textPainter.size;

@@ -1,0 +1,104 @@
+{
+  "sun": {
+    "id": "sun",
+    "name": "Sun",
+    "type": "sun",
+    "description": "Our star at the center of the Solar System.",
+    "color": "#FFD700",
+    "radius": 12.0,
+    "az": 175.0,
+    "alt": 3.0
+  },
+  "moon": {
+    "id": "moon",
+    "name": "Moon",
+    "type": "moon",
+    "description": "Earth's natural satellite.",
+    "color": "#E0E0E0",
+    "radius": 8.0,
+    "az": 200.0,
+    "alt": 8.0
+  },
+  "planets": [
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "type": "planet",
+      "description": "The smallest and innermost planet of the Solar System.",
+      "color": "#9B8B7E",
+      "radius": 6.0,
+      "az": 320.0,
+      "alt": -10.0
+    },
+    {
+      "id": "venus",
+      "name": "Venus",
+      "type": "planet",
+      "description": "Second planet from the Sun and the brightest natural object in the night sky after the Moon.",
+      "color": "#FFD700",
+      "radius": 8.0,
+      "az": 150.0,
+      "alt": 12.0
+    },
+    {
+      "id": "earth",
+      "name": "Earth",
+      "type": "planet",
+      "description": "Our home planet, the only known world to harbor life.",
+      "color": "#5BA3E8",
+      "radius": 8.0,
+      "az": 185.0,
+      "alt": 6.0
+    },
+    {
+      "id": "mars",
+      "name": "Mars",
+      "type": "planet",
+      "description": "The red planet, known for its iron-oxide surface.",
+      "color": "#E85D4F",
+      "radius": 6.0,
+      "az": 235.0,
+      "alt": -2.0
+    },
+    {
+      "id": "jupiter",
+      "name": "Jupiter",
+      "type": "planet",
+      "description": "The largest planet in the Solar System, a gas giant with many moons.",
+      "color": "#D4A76A",
+      "radius": 16.0,
+      "az": 120.0,
+      "alt": -5.0
+    },
+    {
+      "id": "saturn",
+      "name": "Saturn",
+      "type": "planet",
+      "description": "Gas giant famous for its prominent ring system.",
+      "color": "#FFE5B4",
+      "radius": 15.0,
+      "az": 195.0,
+      "alt": 1.0
+    },
+    {
+      "id": "uranus",
+      "name": "Uranus",
+      "type": "planet",
+      "description": "An ice giant with a tilted rotation axis.",
+      "color": "#5DDDE6",
+      "radius": 12.0,
+      "az": 260.0,
+      "alt": -8.0
+    },
+    {
+      "id": "neptune",
+      "name": "Neptune",
+      "type": "planet",
+      "description": "The most distant known major planet, an ice giant with strong winds.",
+      "color": "#5080FF",
+      "radius": 12.0,
+      "az": 150.0,
+      "alt": 20.0
+    }
+  ]
+}

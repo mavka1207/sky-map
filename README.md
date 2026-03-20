@@ -9,7 +9,7 @@ A Flutter app that renders a real-time sky view on a black canvas (updates at ~1
   - GPS via `geolocator`
   - Accelerometer + magnetometer via `sensors_plus`
 - **Realtime updates**: object positions recalculated every ~100 ms
-- **Planet details**: complete astronomical data loaded from local JSON asset (`assets/planet_data.json`)
+- **Celestial objects**: complete astronomical data loaded from local JSON asset (`assets/celestial_objects.json`)
 - **Offline support**: all planet/star data bundled with the app — no internet required
 - **Star field**: curated HIP (Hipparcos) star catalog rendered with spectral-color styling
 - **Constellations**: 15+ constellations rendered as line segments (visibility filtered by location/time)
@@ -31,7 +31,7 @@ flutter run
 
 ## Data Sources
 
-- **Planets & celestial objects**: bundled JSON asset (`assets/planet_data.json`)
+- **Planets & celestial objects**: bundled JSON asset (`assets/celestial_objects.json`) with azimuth/altitude coordinates
 - **Stars**: Hipparcos (HIP) catalog with spectral classification
 - **Constellations**: IAU constellation boundaries and line patterns
 

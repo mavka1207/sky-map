@@ -7,33 +7,50 @@ import 'package:flutter/material.dart';
 /// Celestial object types.
 enum ObjectType { sun, moon, planet }
 
-/// A celestial object (planet, sun, moon, star, etc.)
+/// A celestial object (planet, sun, moon, constellation star, etc.)
 class CelestialObject {
+  final String id;
   final String name;
-  final ObjectType type;
+  final String type; // 'sun', 'moon', 'planet', 'constellation', 'star'
+  final String description;
+  final double az; // azimuth in degrees: 0-360
+  final double alt; // altitude in degrees: -90 to +90
   final Color color;
-  final String baseDescription;
-  final double displayRadius; // Visual radius for rendering
-  final Offset screenOffset; // Deterministic jitter for visual variety
-  String description;
+  final double displayRadius;
+  final Offset screenOffset;
 
   CelestialObject({
+    required this.id,
     required this.name,
     required this.type,
-    required this.color,
-    required this.baseDescription,
-    this.displayRadius = 10.0, // Default radius
-    this.screenOffset = Offset.zero, // No jitter by default
-  }) : description = baseDescription;
+    required this.description,
+    required this.az,
+    required this.alt,
+    this.color = const Color(0xFFFFFFFF),
+    this.displayRadius = 10.0,
+    this.screenOffset = Offset.zero,
+  });
 
-  /// Create a copy with updated offset
-  CelestialObject copyWith({Offset? screenOffset}) {
+  CelestialObject copyWith({
+    String? id,
+    String? name,
+    String? type,
+    String? description,
+    double? az,
+    double? alt,
+    Color? color,
+    double? displayRadius,
+    Offset? screenOffset,
+  }) {
     return CelestialObject(
-      name: name,
-      type: type,
-      color: color,
-      baseDescription: baseDescription,
-      displayRadius: displayRadius,
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      description: description ?? this.description,
+      az: az ?? this.az,
+      alt: alt ?? this.alt,
+      color: color ?? this.color,
+      displayRadius: displayRadius ?? this.displayRadius,
       screenOffset: screenOffset ?? this.screenOffset,
     );
   }
