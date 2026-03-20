@@ -136,7 +136,7 @@ class SkyProvider extends ChangeNotifier {
       }
 
       // Load Planets
-      final planets = data['planets'] as List? ?? [];
+      final planets = data['planets'] as List<dynamic>? ?? [];
       for (final p in planets) {
         final id = p['id'] as String;
         _catalog.add(
@@ -168,13 +168,13 @@ class SkyProvider extends ChangeNotifier {
       );
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      final constellationsData = data['constellations'] as List? ?? [];
+      final constellationsData = data['constellations'] as List<dynamic>? ?? [];
       for (final c in constellationsData) {
         final id = c['id'] as String;
         final name = c['name'] as String;
         final desc = c['description'] as String;
 
-        final starsJson = c['stars'] as List? ?? [];
+        final starsJson = c['stars'] as List<dynamic>? ?? [];
         final stars = <CelestialObject>[];
 
         for (var s in starsJson) {
@@ -194,7 +194,7 @@ class SkyProvider extends ChangeNotifier {
         }
 
         final connections = <List<int>>[];
-        final connectionsJson = c['connections'] as List? ?? [];
+        final connectionsJson = c['connections'] as List<dynamic>? ?? [];
         for (var pair in connectionsJson) {
           connections.add([(pair[0] as num).toInt(), (pair[1] as num).toInt()]);
         }
