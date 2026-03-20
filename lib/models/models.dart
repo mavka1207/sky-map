@@ -13,6 +13,7 @@ class CelestialObject {
   final ObjectType type;
   final Color color;
   final String baseDescription;
+  final double displayRadius; // Visual radius for rendering
   String description;
 
   CelestialObject({
@@ -20,6 +21,7 @@ class CelestialObject {
     required this.type,
     required this.color,
     required this.baseDescription,
+    this.displayRadius = 10.0, // Default radius
   }) : description = baseDescription;
 }
 

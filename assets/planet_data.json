@@ -3,6 +3,7 @@
     {
       "name": "Mercury",
       "type": "terrestrial",
+      "radius": 6,
       "color": "#9B8B7E",
       "mass": 3.3011e23,
       "diameter": 3879.73,
@@ -17,6 +18,7 @@
     {
       "name": "Venus",
       "type": "terrestrial",
+      "radius": 8,
       "color": "#FFD700",
       "mass": 4.8673e24,
       "diameter": 12103.6,
@@ -31,6 +33,7 @@
     {
       "name": "Earth",
       "type": "terrestrial",
+      "radius": 8,
       "color": "#5BA3E8",
       "mass": 5.972e24,
       "diameter": 12742,
@@ -45,6 +48,7 @@
     {
       "name": "Mars",
       "type": "terrestrial",
+      "radius": 6,
       "color": "#E85D4F",
       "mass": 6.4169e23,
       "diameter": 6779,
@@ -59,6 +63,7 @@
     {
       "name": "Jupiter",
       "type": "gasgiant",
+      "radius": 16,
       "color": "#D4A76A",
       "mass": 1.898e27,
       "diameter": 139820,
@@ -73,6 +78,7 @@
     {
       "name": "Saturn",
       "type": "gasgiant",
+      "radius": 15,
       "color": "#FFE5B4",
       "mass": 5.6832e26,
       "diameter": 116460,
@@ -87,6 +93,7 @@
     {
       "name": "Uranus",
       "type": "icegiant",
+      "radius": 12,
       "color": "#5DDDE6",
       "mass": 8.6810e25,
       "diameter": 50724,
@@ -101,6 +108,7 @@
     {
       "name": "Neptune",
       "type": "icegiant",
+      "radius": 12,
       "color": "#5080FF",
       "mass": 1.02409e26,
       "diameter": 49244,
@@ -116,6 +124,7 @@
   "sun": {
     "name": "Sun",
     "type": "star",
+    "radius": 12,
     "color": "#FFD700",
     "mass": 1.989e30,
     "diameter": 1391000,
@@ -128,6 +137,7 @@
   "moon": {
     "name": "Moon",
     "type": "satellite",
+    "radius": 8,
     "color": "#E0E0E0",
     "mass": 7.342e22,
     "diameter": 3474.2,

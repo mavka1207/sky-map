@@ -102,6 +102,7 @@ class SkyProvider extends ChangeNotifier {
               p['color'] as String? ?? '#FFFF00',
             ), // yellow fallback
             baseDescription: p['description'] as String? ?? 'A planet',
+            displayRadius: ((p['radius'] as num?) ?? 10).toDouble(),
           ),
         );
       }
@@ -116,6 +117,7 @@ class SkyProvider extends ChangeNotifier {
               sun['color'] as String? ?? '#FFFF00',
             ), // yellow
             baseDescription: sun['description'] as String? ?? 'The Sun',
+            displayRadius: ((sun['radius'] as num?) ?? 12).toDouble(),
           ),
         );
       }
@@ -130,6 +132,7 @@ class SkyProvider extends ChangeNotifier {
               moon['color'] as String? ?? '#FFFFFF',
             ), // white fallback
             baseDescription: moon['description'] as String? ?? 'The Moon',
+            displayRadius: ((moon['radius'] as num?) ?? 8).toDouble(),
           ),
         );
       }
@@ -141,23 +144,24 @@ class SkyProvider extends ChangeNotifier {
 
   void _loadDefaultPlanets() {
     const defaultPlanets = [
-      ('Mercury', '#9B8B7E'), // medium brown - более видимый коричневый
-      ('Venus', '#FFD700'), // bright golden yellow - яркий золотистый
-      ('Earth', '#5BA3E8'), // brighter sky blue - яркий голубой
-      ('Mars', '#E85D4F'), // brighter rust red - яркий ржавый
-      ('Jupiter', '#D4A76A'), // brighter tan - яркий палевый
-      ('Saturn', '#FFE5B4'), // brighter sandy - яркий песочный
-      ('Uranus', '#5DDDE6'), // brighter cyan - яркий бирюзовый
-      ('Neptune', '#5080FF'), // brighter blue - яркий синий
+      ('Mercury', '#9B8B7E', 6.0), // medium brown
+      ('Venus', '#FFD700', 8.0), // bright golden yellow
+      ('Earth', '#5BA3E8', 8.0), // brighter sky blue
+      ('Mars', '#E85D4F', 6.0), // brighter rust red
+      ('Jupiter', '#D4A76A', 16.0), // brighter tan - largest
+      ('Saturn', '#FFE5B4', 15.0), // brighter sandy
+      ('Uranus', '#5DDDE6', 12.0), // brighter cyan
+      ('Neptune', '#5080FF', 12.0), // brighter blue
     ];
 
-    for (final (name, color) in defaultPlanets) {
+    for (final (name, color, radius) in defaultPlanets) {
       _catalog.add(
         CelestialObject(
           name: name,
           type: ObjectType.planet,
           color: _colorFromString(color),
           baseDescription: '$name is a planet in our solar system.',
+          displayRadius: radius,
         ),
       );
     }
@@ -166,10 +170,9 @@ class SkyProvider extends ChangeNotifier {
       CelestialObject(
         name: 'Sun',
         type: ObjectType.sun,
-        color: _colorFromString(
-          '#FFD700',
-        ), // bright golden yellow - яркий золотистый
+        color: _colorFromString('#FFD700'),
         baseDescription: 'The Sun is at the center of our solar system.',
+        displayRadius: 12.0,
       ),
     );
 
@@ -177,8 +180,9 @@ class SkyProvider extends ChangeNotifier {
       CelestialObject(
         name: 'Moon',
         type: ObjectType.moon,
-        color: _colorFromString('#E0E0E0'), // lighter gray - светлый серый
+        color: _colorFromString('#E0E0E0'),
         baseDescription: 'The Moon orbits Earth.',
+        displayRadius: 8.0,
       ),
     );
   }
@@ -331,11 +335,7 @@ class SkyProvider extends ChangeNotifier {
           RenderedObject(
             object: object,
             offset: projected,
-            radius: switch (object.type) {
-              ObjectType.sun => 14,
-              ObjectType.moon => 10,
-              ObjectType.planet => 9,
-            },
+            radius: object.displayRadius,
           ),
         );
       }
