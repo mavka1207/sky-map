@@ -114,6 +114,8 @@ class _SkyScreenState extends State<SkyScreen> {
                       provider.state.constellationLines,
                       provider.state.selectedObject?.name,
                       hipStars: provider.state.visibleHipStars,
+                      constellations: provider.constellations,
+                      state: provider.state,
                       nightVisionMode: widget.nightVisionMode,
                     ),
                     child: Container(),

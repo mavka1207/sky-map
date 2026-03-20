@@ -11,6 +11,8 @@ class SkyPainter extends CustomPainter {
   final List<RenderedObject> objects;
   final List<RenderedStar> hipStars;
   final List<LineSegment> constellationLines;
+  final List<Constellation> constellations;
+  final SkyState state;
   final String? selectedObjectName;
   final bool nightVisionMode;
 
@@ -19,6 +21,8 @@ class SkyPainter extends CustomPainter {
     this.constellationLines,
     this.selectedObjectName, {
     this.hipStars = const [],
+    this.constellations = const [],
+    required this.state,
     this.nightVisionMode = false,
   });
 
@@ -36,7 +40,7 @@ class SkyPainter extends CustomPainter {
       canvas.drawCircle(_scale(star.offset, size), star.radius, starPaint);
     }
 
-    // Constellation lines
+    // Constellation lines (pre-computed from provider)
     final linePaint = Paint()
       ..color = Colors.white38
       ..strokeWidth = 2;
@@ -47,6 +51,9 @@ class SkyPainter extends CustomPainter {
         linePaint,
       );
     }
+
+    // Custom constellation lines with wrap-around check (projected every frame)
+    _drawConstellations(canvas, size);
 
     final placedLabelRects = <Rect>[];
 
@@ -106,6 +113,82 @@ class SkyPainter extends CustomPainter {
     }
   }
 
+  /// Project star from azimuth/altitude to screen coordinates.
+  /// Relative azimuth is calculated based on device heading.
+  Offset? _projectStar(double az, double alt, Size size) {
+    // Calculate relative azimuth from device heading
+    final relAz = (az - state.heading + 360) % 360;
+    final relAlt = alt - state.pitch;
+
+    // Simple cylindrical projection: az -> x, alt -> y
+    final x = (relAz / 360.0) * size.width;
+    final y = size.height / 2 - (relAlt / 90.0) * (size.height / 2);
+
+    // Check if within visible bounds (with some margin)
+    const margin = 50.0;
+    if (x < -margin || x > size.width + margin) return null;
+    if (y < -margin || y > size.height + margin) return null;
+
+    return Offset(x, y);
+  }
+
+  /// Draw constellation lines with projections recalculated every frame.
+  /// Includes wrap-around check to avoid long lines across screen.
+  void _drawConstellations(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = Colors.white.withOpacity(0.4)
+      ..strokeWidth = 1.0;
+
+    final starGlowPaint = Paint()
+      ..color = Colors.white.withOpacity(0.7)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+
+    final starPaint = Paint()..color = Colors.white;
+
+    for (final constellation in constellations) {
+      // Project all stars for this constellation
+      final positions = <Offset>[];
+      final relAzimuths = <double>[];
+
+      for (final star in constellation.stars) {
+        final pos = _projectStar(star.az, star.alt, size);
+        if (pos != null) {
+          positions.add(pos);
+          final relAz = (star.az - state.heading + 360) % 360;
+          relAzimuths.add(relAz);
+        } else {
+          positions.add(Offset.zero); // placeholder
+          relAzimuths.add(-1); // invalid marker
+        }
+      }
+
+      // Draw lines between connected stars
+      for (final connection in constellation.connections) {
+        final idx1 = connection[0];
+        final idx2 = connection[1];
+
+        if (idx1 >= positions.length || idx2 >= positions.length) continue;
+        if (relAzimuths[idx1] < 0 || relAzimuths[idx2] < 0) continue;
+
+        // Skip lines that wrap around 0°/360° (causes visual artifacts)
+        final azDiff = (relAzimuths[idx1] - relAzimuths[idx2]).abs();
+        if (azDiff > 180) continue;
+
+        final p1 = positions[idx1];
+        final p2 = positions[idx2];
+        canvas.drawLine(p1, p2, linePaint);
+      }
+
+      // Draw constellation stars
+      for (var i = 0; i < positions.length; i++) {
+        if (relAzimuths[i] < 0) continue; // star not visible
+        final pos = positions[i];
+        canvas.drawCircle(pos, 3.0, starGlowPaint); // glow
+        canvas.drawCircle(pos, 1.5, starPaint); // star
+      }
+    }
+  }
+
   /// Draw atmospheric glow/halo around celestial body
   void _drawGlow(Canvas canvas, Offset center, double radius, Color color) {
     final glowRadius = radius * 1.8;
@@ -162,5 +245,8 @@ class SkyPainter extends CustomPainter {
       oldDelegate.objects != objects ||
       oldDelegate.hipStars != hipStars ||
       oldDelegate.constellationLines != constellationLines ||
+      oldDelegate.constellations != constellations ||
+      oldDelegate.state.heading != state.heading ||
+      oldDelegate.state.pitch != state.pitch ||
       oldDelegate.nightVisionMode != nightVisionMode;
 }

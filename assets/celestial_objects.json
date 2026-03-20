@@ -100,5 +100,174 @@
       "az": 150.0,
       "alt": 20.0
     }
+  ],
+  "constellations": [
+    {
+      "id": "orion",
+      "name": "Orion",
+      "description": "A prominent constellation, the Hunter. Contains Betelgeuse and Rigel.",
+      "stars": [
+        {
+          "name": "Betelgeuse",
+          "az": 60.0,
+          "alt": 25.0
+        },
+        {
+          "name": "Rigel",
+          "az": 75.0,
+          "alt": 10.0
+        },
+        {
+          "name": "Bellatrix",
+          "az": 65.0,
+          "alt": 18.0
+        },
+        {
+          "name": "Saiph",
+          "az": 80.0,
+          "alt": 5.0
+        },
+        {
+          "name": "Alnitak",
+          "az": 68.0,
+          "alt": 14.0
+        },
+        {
+          "name": "Alnilam",
+          "az": 70.0,
+          "alt": 12.0
+        }
+      ],
+      "connections": [
+        [0, 2],
+        [2, 1],
+        [1, 3],
+        [2, 4],
+        [4, 5],
+        [5, 1]
+      ]
+    },
+    {
+      "id": "ursa_major",
+      "name": "Ursa Major",
+      "description": "The Great Bear, contains the Big Dipper asterism.",
+      "stars": [
+        {
+          "name": "Alkaid",
+          "az": 30.0,
+          "alt": 55.0
+        },
+        {
+          "name": "Mizar",
+          "az": 35.0,
+          "alt": 52.0
+        },
+        {
+          "name": "Alioth",
+          "az": 40.0,
+          "alt": 50.0
+        },
+        {
+          "name": "Megrez",
+          "az": 45.0,
+          "alt": 48.0
+        },
+        {
+          "name": "Phecda",
+          "az": 42.0,
+          "alt": 45.0
+        },
+        {
+          "name": "Dubhe",
+          "az": 25.0,
+          "alt": 48.0
+        },
+        {
+          "name": "Merak",
+          "az": 32.0,
+          "alt": 46.0
+        }
+      ],
+      "connections": [
+        [5, 6],
+        [6, 4],
+        [4, 3],
+        [3, 2],
+        [2, 1],
+        [1, 0],
+        [6, 2]
+      ]
+    },
+    {
+      "id": "cassiopeia",
+      "name": "Cassiopeia",
+      "description": "The Queen constellation, shaped like a W or M.",
+      "stars": [
+        {
+          "name": "Scheherazade",
+          "az": 15.0,
+          "alt": 60.0
+        },
+        {
+          "name": "Kaph",
+          "az": 22.0,
+          "alt": 58.0
+        },
+        {
+          "name": "Kappa Cassiopeiae",
+          "az": 28.0,
+          "alt": 62.0
+        },
+        {
+          "name": "Navi",
+          "az": 35.0,
+          "alt": 64.0
+        },
+        {
+          "name": "Ruchbah",
+          "az": 42.0,
+          "alt": 62.0
+        }
+      ],
+      "connections": [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 4]
+      ]
+    },
+    {
+      "id": "lyra",
+      "name": "Lyra",
+      "description": "The Harp, contains the bright star Vega.",
+      "stars": [
+        {
+          "name": "Vega",
+          "az": 50.0,
+          "alt": 70.0
+        },
+        {
+          "name": "Epsilon Lyrae",
+          "az": 48.0,
+          "alt": 68.0
+        },
+        {
+          "name": "Delta Lyrae",
+          "az": 52.0,
+          "alt": 66.0
+        },
+        {
+          "name": "Gamma Lyrae",
+          "az": 54.0,
+          "alt": 72.0
+        }
+      ],
+      "connections": [
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [1, 2]
+      ]
+    }
   ]
 }

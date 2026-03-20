@@ -134,6 +134,23 @@ class LineSegment {
   int get hashCode => start.hashCode ^ end.hashCode ^ constellation.hashCode;
 }
 
+/// A constellation with its component stars and connections.
+class Constellation {
+  final String id;
+  final String name;
+  final String description;
+  final List<CelestialObject> stars;
+  final List<List<int>> connections; // pairs of star indices
+
+  Constellation({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.stars,
+    required this.connections,
+  });
+}
+
 /// Complete sky state snapshot.
 class SkyState {
   final double latitude;

@@ -34,6 +34,8 @@ class SkyProvider extends ChangeNotifier {
 
   SkyState get state => _state;
 
+  List<Constellation> get constellations => _constellations;
+
   // Sensors
   StreamSubscription<AccelerometerEvent>? _accelSub;
   StreamSubscription<MagnetometerEvent>? _magSub;
@@ -76,12 +78,14 @@ class SkyProvider extends ChangeNotifier {
 
   // Catalog
   final List<CelestialObject> _catalog = [];
+  final List<Constellation> _constellations = [];
 
   SkyProvider();
 
   Future<void> initialize() async {
     _baseJulian = SkyCalculator.calculateJulianDate(DateTime.now().toUtc());
     await _loadCelestialObjects();
+    await _loadConstellations();
     await _initLocation();
     _listenSensors();
     _startUpdateTimer();
@@ -153,6 +157,62 @@ class SkyProvider extends ChangeNotifier {
       if (kDebugMode) print('Loaded ${_catalog.length} celestial objects');
     } catch (e) {
       if (kDebugMode) print('Failed to load celestial objects: $e');
+    }
+  }
+
+  /// Load constellations from JSON with star positions and connections
+  Future<void> _loadConstellations() async {
+    try {
+      final jsonString = await rootBundle.loadString(
+        'assets/celestial_objects.json',
+      );
+      final data = jsonDecode(jsonString) as Map<String, dynamic>;
+
+      final constellationsData = data['constellations'] as List? ?? [];
+      for (final c in constellationsData) {
+        final id = c['id'] as String;
+        final name = c['name'] as String;
+        final desc = c['description'] as String;
+
+        final starsJson = c['stars'] as List? ?? [];
+        final stars = <CelestialObject>[];
+
+        for (var s in starsJson) {
+          stars.add(
+            CelestialObject(
+              id: '${id}_${s['name']}',
+              name: s['name'] as String,
+              type: 'star',
+              description: desc,
+              az: (s['az'] as num).toDouble(),
+              alt: (s['alt'] as num).toDouble(),
+              color: const Color(0xFFFFFFFF),
+              displayRadius: 2.0,
+              screenOffset: Offset.zero,
+            ),
+          );
+        }
+
+        final connections = <List<int>>[];
+        final connectionsJson = c['connections'] as List? ?? [];
+        for (var pair in connectionsJson) {
+          connections.add([(pair[0] as num).toInt(), (pair[1] as num).toInt()]);
+        }
+
+        _constellations.add(
+          Constellation(
+            id: id,
+            name: name,
+            description: desc,
+            stars: stars,
+            connections: connections,
+          ),
+        );
+      }
+
+      if (kDebugMode) print('Loaded ${_constellations.length} constellations');
+    } catch (e) {
+      if (kDebugMode) print('Failed to load constellations: $e');
     }
   }
 
@@ -405,6 +465,49 @@ class SkyProvider extends ChangeNotifier {
           final b = projectedStars[line.starIndex2];
           if (a == null || b == null) continue;
           constellationLines.add(LineSegment(a, b, c.englishName));
+        }
+      }
+
+      // Load custom constellations from JSON
+      for (final constellation in _constellations) {
+        final projectedStars = <int, Offset>{};
+
+        for (var i = 0; i < constellation.stars.length; i++) {
+          final star = constellation.stars[i];
+          // Project using Az/Alt directly
+          final projected = SkyCalculator.projectToScreen(
+            star.az,
+            star.alt,
+            azimuth,
+            pitch,
+            baseAzimuthFov,
+            baseAltitudeFov,
+            azimuthFovScale,
+            altitudeFovScale,
+            allowBelowHorizon: true,
+          );
+
+          if (projected != null) {
+            projectedStars[i] = projected;
+            visibleHipStars.add(
+              RenderedStar(
+                offset: projected,
+                radius: 2.5,
+                color: const Color(0xFFFFFFFF),
+                opacity: 0.9,
+              ),
+            );
+          }
+        }
+
+        // Draw lines between connected stars
+        for (final connection in constellation.connections) {
+          final startIdx = connection[0];
+          final endIdx = connection[1];
+          final a = projectedStars[startIdx];
+          final b = projectedStars[endIdx];
+          if (a == null || b == null) continue;
+          constellationLines.add(LineSegment(a, b, constellation.name));
         }
       }
     }
