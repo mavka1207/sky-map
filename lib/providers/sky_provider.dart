@@ -103,6 +103,7 @@ class SkyProvider extends ChangeNotifier {
             ), // yellow fallback
             baseDescription: p['description'] as String? ?? 'A planet',
             displayRadius: ((p['radius'] as num?) ?? 10).toDouble(),
+            screenOffset: _computeJitter(p['name'] as String),
           ),
         );
       }
@@ -118,6 +119,7 @@ class SkyProvider extends ChangeNotifier {
             ), // yellow
             baseDescription: sun['description'] as String? ?? 'The Sun',
             displayRadius: ((sun['radius'] as num?) ?? 12).toDouble(),
+            screenOffset: _computeJitter(sun['name'] as String? ?? 'Sun'),
           ),
         );
       }
@@ -133,6 +135,7 @@ class SkyProvider extends ChangeNotifier {
             ), // white fallback
             baseDescription: moon['description'] as String? ?? 'The Moon',
             displayRadius: ((moon['radius'] as num?) ?? 8).toDouble(),
+            screenOffset: _computeJitter(moon['name'] as String? ?? 'Moon'),
           ),
         );
       }
@@ -162,6 +165,7 @@ class SkyProvider extends ChangeNotifier {
           color: _colorFromString(color),
           baseDescription: '$name is a planet in our solar system.',
           displayRadius: radius,
+          screenOffset: _computeJitter(name),
         ),
       );
     }
@@ -173,6 +177,7 @@ class SkyProvider extends ChangeNotifier {
         color: _colorFromString('#FFD700'),
         baseDescription: 'The Sun is at the center of our solar system.',
         displayRadius: 12.0,
+        screenOffset: _computeJitter('Sun'),
       ),
     );
 
@@ -183,6 +188,7 @@ class SkyProvider extends ChangeNotifier {
         color: _colorFromString('#E0E0E0'),
         baseDescription: 'The Moon orbits Earth.',
         displayRadius: 8.0,
+        screenOffset: _computeJitter('Moon'),
       ),
     );
   }
@@ -192,6 +198,20 @@ class SkyProvider extends ChangeNotifier {
     if (!hexColor.startsWith('#')) buffer.write('ff');
     buffer.write(hexColor.replaceFirst('#', ''));
     return Color(int.parse(buffer.toString(), radix: 16));
+  }
+
+  /// Generate deterministic jitter offset based on name/id
+  /// Same input always produces same output (reproducible)
+  Offset _computeJitter(String id) {
+    // Deterministic "random" using string hash
+    int sum = id.codeUnits.fold(0, (a, b) => a + b);
+    final rand = Random(sum);
+
+    const double maxJitter = 15.0; // pixels
+    final double dx = (rand.nextDouble() * 2 - 1) * maxJitter;
+    final double dy = (rand.nextDouble() * 2 - 1) * maxJitter;
+
+    return Offset(dx, dy);
   }
 
   Future<void> _initLocation() async {

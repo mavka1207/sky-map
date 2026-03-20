@@ -14,6 +14,7 @@ class CelestialObject {
   final Color color;
   final String baseDescription;
   final double displayRadius; // Visual radius for rendering
+  final Offset screenOffset; // Deterministic jitter for visual variety
   String description;
 
   CelestialObject({
@@ -22,7 +23,20 @@ class CelestialObject {
     required this.color,
     required this.baseDescription,
     this.displayRadius = 10.0, // Default radius
+    this.screenOffset = Offset.zero, // No jitter by default
   }) : description = baseDescription;
+
+  /// Create a copy with updated offset
+  CelestialObject copyWith({Offset? screenOffset}) {
+    return CelestialObject(
+      name: name,
+      type: type,
+      color: color,
+      baseDescription: baseDescription,
+      displayRadius: displayRadius,
+      screenOffset: screenOffset ?? this.screenOffset,
+    );
+  }
 }
 
 /// A celestial object rendered on screen with position and size.
