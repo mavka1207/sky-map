@@ -49,10 +49,6 @@ class SkyProvider extends ChangeNotifier {
   double _smoothAzimuth = 0;
   double _smoothPitch = 0;
   bool _hasOrientationSeed = false;
-  double? _lastRawAzimuth;
-  double? _lastRawPitch;
-  int _stillCounter = 0;
-  bool _isDeviceStill = false;
 
   // Caching for performance
   double? _cachedJulian;
@@ -60,7 +56,6 @@ class SkyProvider extends ChangeNotifier {
   DateTime? _lastTimeUpdateUtc;
   Position? _lastPositionForTimeUpdate;
   late final double _baseJulian;
-  bool _hasLocation = false;
 
   // FOV scaling (with zoom constraints)
   final double baseAzimuthFov = 260.0;
@@ -251,7 +246,6 @@ class SkyProvider extends ChangeNotifier {
           latitude: position.latitude,
           longitude: position.longitude,
         );
-        _hasLocation = true;
         notifyListeners();
 
         _posSub = Geolocator.getPositionStream().listen((pos) {
@@ -259,7 +253,6 @@ class SkyProvider extends ChangeNotifier {
             latitude: pos.latitude,
             longitude: pos.longitude,
           );
-          _hasLocation = true;
           _updateSky();
         });
       }
@@ -289,8 +282,8 @@ class SkyProvider extends ChangeNotifier {
   }
 
   void _updateSky() {
-    // Skip if location not yet determined
-    if (!_hasLocation) return;
+    // Allow sky updates even without precise location (use 0.0 as fallback)
+    // Sky rendering works better with any orientation than nothing
 
     final orientation = _estimateOrientation();
     final azimuth = orientation.$1;
@@ -317,7 +310,6 @@ class SkyProvider extends ChangeNotifier {
         _cachedJulian == null ||
         _cachedLstDegrees == null ||
         movedInGps ||
-        !_isDeviceStill ||
         staleByTime;
 
     if (shouldUpdateTime) {
@@ -455,65 +447,46 @@ class SkyProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Estimate device orientation from accelerometer, magnetometer, and compass.
+  /// All values are in DEGREES (not radians)!
   (double, double) _estimateOrientation() {
     final a = _accelerometerEvent;
-    if (a == null) {
-      return (_smoothAzimuth, _smoothPitch);
-    }
+    if (a == null) return (_smoothAzimuth, _smoothPitch);
 
-    final pitch = atan2(-a.x, sqrt((a.y * a.y) + (a.z * a.z))) * 180 / pi;
+    // PITCH IN DEGREES from accelerometer (not radians!)
+    final rawPitch = atan2(-a.x, sqrt(a.y * a.y + a.z * a.z)) * 180 / pi;
+
+    // Get azimuth from compass, or fallback to magnetometer calculation
     double? azimuth = _headingDegrees;
     if (azimuth == null && _magnetometerEvent != null) {
       final m = _magnetometerEvent!;
       azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
     }
-    if (azimuth == null) {
-      return (_smoothAzimuth, _smoothPitch);
-    }
 
+    if (azimuth == null) return (_smoothAzimuth, _smoothPitch);
+
+    // First orientation reading - seed the smoothing filters
     if (!_hasOrientationSeed) {
       _hasOrientationSeed = true;
       _smoothAzimuth = azimuth;
-      _smoothPitch = pitch;
-      _lastRawAzimuth = azimuth;
-      _lastRawPitch = pitch;
+      _smoothPitch = rawPitch;
       return (_smoothAzimuth, _smoothPitch);
     }
 
-    const deadbandDeg = 0.35;
-    const stillRawDeg = 0.25;
-    const stillFramesToFreeze = 8;
-
-    final prevRawAz = _lastRawAzimuth ?? azimuth;
-    final prevRawPitch = _lastRawPitch ?? pitch;
-    final rawAzDelta = (((azimuth - prevRawAz + 540) % 360) - 180).abs();
-    final rawPitchDelta = (pitch - prevRawPitch).abs();
-
-    _lastRawAzimuth = azimuth;
-    _lastRawPitch = pitch;
-
-    if (rawAzDelta < stillRawDeg && rawPitchDelta < stillRawDeg) {
-      _stillCounter++;
-    } else {
-      _stillCounter = 0;
-    }
-
-    if (_stillCounter >= stillFramesToFreeze) {
-      _isDeviceStill = true;
-      return (_smoothAzimuth, _smoothPitch);
-    }
-    _isDeviceStill = false;
-
+    // Dead-band + smoothing to reduce jitter without losing responsiveness
     const alpha = 0.06;
-    final smoothAzDelta = (((azimuth - _smoothAzimuth + 540) % 360) - 180)
-        .abs();
-    if (smoothAzDelta >= deadbandDeg) {
+    const deadband = 0.35;
+
+    // Smooth azimuth with deadband
+    final azDiff = SkyCalculator.normalizeAngleDiff(_smoothAzimuth, azimuth);
+    if (azDiff.abs() > deadband) {
       _smoothAzimuth = SkyCalculator.lerpAngle(_smoothAzimuth, azimuth, alpha);
     }
 
-    final smoothPitchDelta = (pitch - _smoothPitch).abs();
-    if (smoothPitchDelta >= deadbandDeg) {
-      _smoothPitch = _smoothPitch * (1 - alpha) + pitch * alpha;
+    // Smooth pitch with deadband
+    final pitchDiff = rawPitch - _smoothPitch;
+    if (pitchDiff.abs() > deadband) {
+      _smoothPitch = _smoothPitch + pitchDiff * alpha;
     }
 
     return (_smoothAzimuth, _smoothPitch);

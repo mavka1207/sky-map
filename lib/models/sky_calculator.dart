@@ -117,11 +117,13 @@ class SkyCalculator {
   }
 
   /// Project sky coordinates to screen normalized coordinates (-1 to 1).
+  /// Project celestial object to screen coordinates.
+  /// All angle parameters (azimuth, altitude, phoneAzimuth, phonePitch) MUST BE IN DEGREES!
   static Offset? projectToScreen(
-    double azimuth,
-    double altitude,
-    double phoneAzimuth,
-    double phonePitch,
+    double azimuth, // degrees
+    double altitude, // degrees
+    double phoneAzimuth, // degrees
+    double phonePitch, // degrees (MUST BE IN DEGREES, NOT RADIANS!)
     double baseAzimuthFov,
     double baseAltitudeFov,
     double azimuthFovScale,
