@@ -154,7 +154,7 @@ class SkyProvider extends ChangeNotifier {
     }
   }
 
-  /// Load constellations from JSON with star positions and connections
+  /// Load constellations from JSON with star positions (RA/DEC) and connections
   Future<void> _loadConstellations() async {
     try {
       final jsonString = await rootBundle.loadString(
@@ -172,16 +172,18 @@ class SkyProvider extends ChangeNotifier {
         final stars = <CelestialObject>[];
 
         for (var s in starsJson) {
+          // Stars in JSON have RA/DEC (not Az/Alt)
+          // Store them in az/alt fields; projection will convert to Az/Alt
           stars.add(
             CelestialObject(
               id: '${id}_${s['name']}',
               name: s['name'] as String,
               type: 'star',
               description: desc,
-              az: (s['az'] as num).toDouble(),
-              alt: (s['alt'] as num).toDouble(),
+              az: (s['ra'] as num).toDouble(), // RA (0-360 degrees)
+              alt: (s['dec'] as num).toDouble(), // DEC (-90 to +90 degrees)
               color: const Color(0xFFFFFFFF),
-              displayRadius: 2.0,
+              displayRadius: 2.5,
               screenOffset: Offset.zero,
             ),
           );

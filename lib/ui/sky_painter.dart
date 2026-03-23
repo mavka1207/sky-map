@@ -101,6 +101,9 @@ class SkyPainter extends CustomPainter {
       );
       textPainter.paint(canvas, labelRect.topLeft);
     }
+
+    // Draw compass directions and horizon line
+    _drawCompassLabels(canvas, size);
   }
 
   /// Project star from azimuth/altitude to screen coordinates with FOV scaling.
@@ -235,6 +238,83 @@ class SkyPainter extends CustomPainter {
     final x = size.width / 2 + normalized.dx * (size.width / 2);
     final y = size.height / 2 - normalized.dy * (size.height / 2);
     return Offset(x, y);
+  }
+
+  /// Draw compass direction labels (N/S/E/W/NE/SE/SW/NW) with horizon line
+  void _drawCompassLabels(Canvas canvas, Size size) {
+    const baseAzimuthFov = 260.0;
+    const baseAltitudeFov = 150.0;
+    final azFov = baseAzimuthFov * azimuthFovScale;
+    final altFov = baseAltitudeFov * altitudeFovScale;
+
+    // Horizon line at altitude 0 degrees
+    final double horizonY =
+        size.height / 2 - ((0.0 - state.pitch) / altFov) * (size.height / 2);
+
+    if (horizonY >= 0 && horizonY <= size.height) {
+      canvas.drawLine(
+        Offset(0, horizonY),
+        Offset(size.width, horizonY),
+        Paint()
+          ..color = Colors.white.withOpacity(0.15)
+          ..strokeWidth = 0.8,
+      );
+    }
+
+    // Compass directions: azimuth -> label
+    final directions = {
+      0.0: 'N',
+      45.0: 'NE',
+      90.0: 'E',
+      135.0: 'SE',
+      180.0: 'S',
+      225.0: 'SW',
+      270.0: 'W',
+      315.0: 'NW',
+    };
+
+    final textStyle = TextStyle(
+      color: Colors.white.withOpacity(0.7),
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 1.2,
+    );
+
+    for (final entry in directions.entries) {
+      final dirAz = entry.key;
+      final label = entry.value;
+
+      // Relative azimuth from device heading
+      double relAz = dirAz - state.heading;
+      // Normalize to -180..+180 range
+      relAz = (relAz + 540) % 360 - 180;
+
+      // Skip if outside visible FOV
+      if (relAz.abs() > azFov) continue;
+
+      // Map relative azimuth to screen x coordinate
+      final double x = (relAz / azFov + 1) / 2 * size.width;
+      final double y = size.height - 30;
+
+      // Draw small tick marks at horizon
+      if (horizonY >= 0 && horizonY <= size.height) {
+        canvas.drawLine(
+          Offset(x, horizonY - 6),
+          Offset(x, horizonY + 6),
+          Paint()
+            ..color = Colors.white.withOpacity(0.4)
+            ..strokeWidth = 1.2,
+        );
+      }
+
+      // Draw direction label
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: textStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      tp.paint(canvas, Offset(x - tp.width / 2, y));
+    }
   }
 
   @override

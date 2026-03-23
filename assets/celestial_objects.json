@@ -4,270 +4,89 @@
     "name": "Sun",
     "type": "sun",
     "description": "Our star at the center of the Solar System.",
-    "color": "#FFD700",
-    "radius": 12.0,
-    "az": 175.0,
-    "alt": 3.0
+    "color": "FFD700",
+    "radius": 14.0
   },
   "moon": {
     "id": "moon",
     "name": "Moon",
     "type": "moon",
     "description": "Earth's natural satellite.",
-    "color": "#E0E0E0",
-    "radius": 8.0,
-    "az": 200.0,
-    "alt": 8.0
+    "color": "E0E0E0",
+    "radius": 10.0
   },
   "planets": [
-    {
-      "id": "mercury",
-      "name": "Mercury",
-      "type": "planet",
-      "description": "The smallest and innermost planet of the Solar System.",
-      "color": "#9B8B7E",
-      "radius": 6.0,
-      "az": 320.0,
-      "alt": -10.0
-    },
-    {
-      "id": "venus",
-      "name": "Venus",
-      "type": "planet",
-      "description": "Second planet from the Sun and the brightest natural object in the night sky after the Moon.",
-      "color": "#FFD700",
-      "radius": 8.0,
-      "az": 150.0,
-      "alt": 12.0
-    },
-    {
-      "id": "earth",
-      "name": "Earth",
-      "type": "planet",
-      "description": "Our home planet, the only known world to harbor life.",
-      "color": "#5BA3E8",
-      "radius": 8.0,
-      "az": 185.0,
-      "alt": 6.0
-    },
-    {
-      "id": "mars",
-      "name": "Mars",
-      "type": "planet",
-      "description": "The red planet, known for its iron-oxide surface.",
-      "color": "#E85D4F",
-      "radius": 6.0,
-      "az": 235.0,
-      "alt": -2.0
-    },
-    {
-      "id": "jupiter",
-      "name": "Jupiter",
-      "type": "planet",
-      "description": "The largest planet in the Solar System, a gas giant with many moons.",
-      "color": "#D4A76A",
-      "radius": 16.0,
-      "az": 120.0,
-      "alt": -5.0
-    },
-    {
-      "id": "saturn",
-      "name": "Saturn",
-      "type": "planet",
-      "description": "Gas giant famous for its prominent ring system.",
-      "color": "#FFE5B4",
-      "radius": 15.0,
-      "az": 195.0,
-      "alt": 1.0
-    },
-    {
-      "id": "uranus",
-      "name": "Uranus",
-      "type": "planet",
-      "description": "An ice giant with a tilted rotation axis.",
-      "color": "#5DDDE6",
-      "radius": 12.0,
-      "az": 260.0,
-      "alt": -8.0
-    },
-    {
-      "id": "neptune",
-      "name": "Neptune",
-      "type": "planet",
-      "description": "The most distant known major planet, an ice giant with strong winds.",
-      "color": "#5080FF",
-      "radius": 12.0,
-      "az": 150.0,
-      "alt": 20.0
-    }
+    { "id": "mercury", "name": "Mercury", "type": "planet", "description": "The smallest and innermost planet.", "color": "9B8B7E", "radius": 6.0 },
+    { "id": "venus",   "name": "Venus",   "type": "planet", "description": "Brightest natural object after the Moon.", "color": "FFD700", "radius": 9.0 },
+    { "id": "mars",    "name": "Mars",    "type": "planet", "description": "The red planet.", "color": "E85D4F", "radius": 7.0 },
+    { "id": "jupiter", "name": "Jupiter", "type": "planet", "description": "Largest planet, a gas giant.", "color": "D4A76A", "radius": 16.0 },
+    { "id": "saturn",  "name": "Saturn",  "type": "planet", "description": "Gas giant with ring system.", "color": "FFE5B4", "radius": 14.0 },
+    { "id": "uranus",  "name": "Uranus",  "type": "planet", "description": "Ice giant with tilted axis.", "color": "5DDDE6", "radius": 11.0 },
+    { "id": "neptune", "name": "Neptune", "type": "planet", "description": "Most distant major planet.", "color": "5080FF", "radius": 11.0 }
   ],
   "constellations": [
     {
-      "id": "orion",
-      "name": "Orion",
-      "description": "A prominent constellation, the Hunter. Contains Betelgeuse and Rigel.",
+      "id": "orion", "name": "Orion",
+      "description": "The Hunter. Contains Betelgeuse and Rigel.",
       "stars": [
-        {
-          "name": "Betelgeuse",
-          "az": 60.0,
-          "alt": 25.0
-        },
-        {
-          "name": "Rigel",
-          "az": 75.0,
-          "alt": 10.0
-        },
-        {
-          "name": "Bellatrix",
-          "az": 65.0,
-          "alt": 18.0
-        },
-        {
-          "name": "Saiph",
-          "az": 80.0,
-          "alt": 5.0
-        },
-        {
-          "name": "Alnitak",
-          "az": 68.0,
-          "alt": 14.0
-        },
-        {
-          "name": "Alnilam",
-          "az": 70.0,
-          "alt": 12.0
-        }
+        { "name": "Betelgeuse", "ra": 88.793,  "dec": 7.407  },
+        { "name": "Rigel",      "ra": 78.634,  "dec": -8.201 },
+        { "name": "Bellatrix",  "ra": 81.283,  "dec": 6.350  },
+        { "name": "Saiph",      "ra": 85.189,  "dec": -9.670 },
+        { "name": "Alnitak",    "ra": 85.189,  "dec": -1.943 },
+        { "name": "Alnilam",    "ra": 84.053,  "dec": -1.202 },
+        { "name": "Mintaka",    "ra": 83.001,  "dec": -0.300 }
       ],
-      "connections": [
-        [0, 2],
-        [2, 1],
-        [1, 3],
-        [2, 4],
-        [4, 5],
-        [5, 1]
-      ]
+      "connections": [[0,2],[2,6],[6,5],[5,4],[4,3],[2,1],[1,3],[0,4]]
     },
     {
-      "id": "ursa_major",
-      "name": "Ursa Major",
-      "description": "The Great Bear, contains the Big Dipper asterism.",
+      "id": "ursa_major", "name": "Ursa Major",
+      "description": "The Great Bear, contains the Big Dipper.",
       "stars": [
-        {
-          "name": "Alkaid",
-          "az": 30.0,
-          "alt": 55.0
-        },
-        {
-          "name": "Mizar",
-          "az": 35.0,
-          "alt": 52.0
-        },
-        {
-          "name": "Alioth",
-          "az": 40.0,
-          "alt": 50.0
-        },
-        {
-          "name": "Megrez",
-          "az": 45.0,
-          "alt": 48.0
-        },
-        {
-          "name": "Phecda",
-          "az": 42.0,
-          "alt": 45.0
-        },
-        {
-          "name": "Dubhe",
-          "az": 25.0,
-          "alt": 48.0
-        },
-        {
-          "name": "Merak",
-          "az": 32.0,
-          "alt": 46.0
-        }
+        { "name": "Dubhe",   "ra": 165.460, "dec": 61.751 },
+        { "name": "Merak",   "ra": 164.605, "dec": 56.383 },
+        { "name": "Phecda",  "ra": 178.458, "dec": 53.695 },
+        { "name": "Megrez",  "ra": 183.857, "dec": 57.033 },
+        { "name": "Alioth",  "ra": 193.507, "dec": 55.960 },
+        { "name": "Mizar",   "ra": 200.981, "dec": 54.926 },
+        { "name": "Alkaid",  "ra": 206.885, "dec": 49.313 }
       ],
-      "connections": [
-        [5, 6],
-        [6, 4],
-        [4, 3],
-        [3, 2],
-        [2, 1],
-        [1, 0],
-        [6, 2]
-      ]
+      "connections": [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]
     },
     {
-      "id": "cassiopeia",
-      "name": "Cassiopeia",
-      "description": "The Queen constellation, shaped like a W or M.",
+      "id": "cassiopeia", "name": "Cassiopeia",
+      "description": "The Queen, W-shape constellation.",
       "stars": [
-        {
-          "name": "Scheherazade",
-          "az": 15.0,
-          "alt": 60.0
-        },
-        {
-          "name": "Kaph",
-          "az": 22.0,
-          "alt": 58.0
-        },
-        {
-          "name": "Kappa Cassiopeiae",
-          "az": 28.0,
-          "alt": 62.0
-        },
-        {
-          "name": "Navi",
-          "az": 35.0,
-          "alt": 64.0
-        },
-        {
-          "name": "Ruchbah",
-          "az": 42.0,
-          "alt": 62.0
-        }
+        { "name": "Schedar",  "ra": 10.127,  "dec": 56.537 },
+        { "name": "Caph",     "ra": 2.295,   "dec": 59.150 },
+        { "name": "Gamma Cas","ra": 14.177,  "dec": 60.717 },
+        { "name": "Ruchbah",  "ra": 21.454,  "dec": 60.235 },
+        { "name": "Segin",    "ra": 28.599,  "dec": 63.670 }
       ],
-      "connections": [
-        [0, 1],
-        [1, 2],
-        [2, 3],
-        [3, 4]
-      ]
+      "connections": [[0,1],[0,2],[2,3],[3,4]]
     },
     {
-      "id": "lyra",
-      "name": "Lyra",
-      "description": "The Harp, contains the bright star Vega.",
+      "id": "lyra", "name": "Lyra",
+      "description": "The Harp, contains bright star Vega.",
       "stars": [
-        {
-          "name": "Vega",
-          "az": 50.0,
-          "alt": 70.0
-        },
-        {
-          "name": "Epsilon Lyrae",
-          "az": 48.0,
-          "alt": 68.0
-        },
-        {
-          "name": "Delta Lyrae",
-          "az": 52.0,
-          "alt": 66.0
-        },
-        {
-          "name": "Gamma Lyrae",
-          "az": 54.0,
-          "alt": 72.0
-        }
+        { "name": "Vega",        "ra": 279.235, "dec": 38.784 },
+        { "name": "Sheliak",     "ra": 282.520, "dec": 33.363 },
+        { "name": "Sulafat",     "ra": 284.736, "dec": 32.690 },
+        { "name": "Epsilon2 Lyr","ra": 281.085, "dec": 39.623 }
       ],
-      "connections": [
-        [0, 1],
-        [0, 2],
-        [0, 3],
-        [1, 2]
-      ]
+      "connections": [[0,1],[1,2],[0,3],[0,2]]
+    },
+    {
+      "id": "scorpius", "name": "Scorpius",
+      "description": "The Scorpion, summer constellation.",
+      "stars": [
+        { "name": "Antares",  "ra": 247.352, "dec": -26.432 },
+        { "name": "Graffias", "ra": 241.359, "dec": -19.805 },
+        { "name": "Dschubba", "ra": 240.083, "dec": -22.622 },
+        { "name": "Sargas",   "ra": 264.330, "dec": -42.998 },
+        { "name": "Shaula",   "ra": 263.402, "dec": -37.103 }
+      ],
+      "connections": [[0,1],[1,2],[0,3],[3,4]]
     }
   ]
 }
