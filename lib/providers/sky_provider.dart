@@ -106,7 +106,8 @@ class SkyProvider extends ChangeNotifier {
             alt: (sun['alt'] as num?)?.toDouble() ?? 0.0,
             color: _colorFromString(sun['color'] as String? ?? '#FFD700'),
             displayRadius: (sun['radius'] as num?)?.toDouble() ?? 12.0,
-            screenOffset: _computeJitter(sun['id'] as String? ?? 'sun'),
+            // Sun position calculated from ephemeris, no jitter needed
+            screenOffset: Offset.zero,
           ),
         );
       }
@@ -124,7 +125,8 @@ class SkyProvider extends ChangeNotifier {
             alt: (moon['alt'] as num?)?.toDouble() ?? 0.0,
             color: _colorFromString(moon['color'] as String? ?? '#E0E0E0'),
             displayRadius: (moon['radius'] as num?)?.toDouble() ?? 8.0,
-            screenOffset: _computeJitter(moon['id'] as String? ?? 'moon'),
+            // Moon position calculated from ephemeris, no jitter needed
+            screenOffset: Offset.zero,
           ),
         );
       }
@@ -143,7 +145,8 @@ class SkyProvider extends ChangeNotifier {
             alt: (p['alt'] as num?)?.toDouble() ?? 0.0,
             color: _colorFromString(p['color'] as String? ?? '#4A90E2'),
             displayRadius: (p['radius'] as num?)?.toDouble() ?? 10.0,
-            screenOffset: _computeJitter(id),
+            // Planets are calculated from orbital mechanics, no jitter needed
+            screenOffset: Offset.zero,
           ),
         );
       }
@@ -217,20 +220,6 @@ class SkyProvider extends ChangeNotifier {
     if (!hexColor.startsWith('#')) buffer.write('ff');
     buffer.write(hexColor.replaceFirst('#', ''));
     return Color(int.parse(buffer.toString(), radix: 16));
-  }
-
-  /// Generate deterministic jitter offset based on name/id
-  /// Same input always produces same output (reproducible)
-  Offset _computeJitter(String id) {
-    // Deterministic "random" using string hash
-    int sum = id.codeUnits.fold(0, (a, b) => a + b);
-    final rand = Random(sum);
-
-    const double maxJitter = 15.0; // pixels
-    final double dx = (rand.nextDouble() * 2 - 1) * maxJitter;
-    final double dy = (rand.nextDouble() * 2 - 1) * maxJitter;
-
-    return Offset(dx, dy);
   }
 
   Future<void> _initLocation() async {

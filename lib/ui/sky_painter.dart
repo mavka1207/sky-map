@@ -68,12 +68,8 @@ class SkyPainter extends CustomPainter {
     for (final item in objects) {
       final isSelected = item.object.name == selectedObjectName;
       final baseColor = item.object.color;
-      var center = _scale(item.offset, size);
-
-      // Apply deterministic jitter offset for planets (visual variety)
-      if (item.object.type == 'planet' || item.object.type == 'moon') {
-        center += item.object.screenOffset;
-      }
+      // Position from projection (az/alt converted to screen coordinates)
+      final center = _scale(item.offset, size);
 
       final radius = isSelected ? item.radius * 1.8 : item.radius;
 
