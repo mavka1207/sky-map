@@ -30,24 +30,41 @@ class SkyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Background
-    final background = Paint()
-      ..color = nightVisionMode ? const Color(0xFF1a0000) : Colors.black;
-    canvas.drawRect(Offset.zero & size, background);
+    // 1. Black background
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = nightVisionMode ? const Color(0xFF1a0000) : Colors.black,
+    );
 
-    // HIP stars (faint background starfield)
+    // 2. Atmospheric gradient (before stars!)
+    _drawAtmosphere(canvas, size);
+
+    // 3. HIP stars (faint background starfield)
+    _drawHipStars(canvas, size);
+
+    // 4. Constellation lines
+    _drawConstellations(canvas, size);
+
+    // 5. Celestial objects (Sun, Moon, Planets)
+    _drawObjects(canvas, size);
+
+    // 6. Compass directions with horizon line
+    _drawCompassLabels(canvas, size);
+  }
+
+  /// Draw HIP stars (faint background starfield)
+  void _drawHipStars(Canvas canvas, Size size) {
     final starPaint = Paint();
     for (final star in hipStars) {
       starPaint.color = star.color.withOpacity(star.opacity);
       canvas.drawCircle(_scale(star.offset, size), star.radius, starPaint);
     }
+  }
 
-    // Constellation lines with wrap-around check (projected every frame)
-    _drawConstellations(canvas, size);
-
+  /// Draw celestial objects (Sun, Moon, Planets) with labels
+  void _drawObjects(Canvas canvas, Size size) {
     final placedLabelRects = <Rect>[];
 
-    // Celestial objects (Sun, Moon, Planets)
     for (final item in objects) {
       final isSelected = item.object.name == selectedObjectName;
       final baseColor = item.object.color;
@@ -101,9 +118,6 @@ class SkyPainter extends CustomPainter {
       );
       textPainter.paint(canvas, labelRect.topLeft);
     }
-
-    // Draw compass directions and horizon line
-    _drawCompassLabels(canvas, size);
   }
 
   /// Project star from azimuth/altitude to screen coordinates with FOV scaling.
@@ -231,6 +245,93 @@ class SkyPainter extends CustomPainter {
     final paint = Paint()..shader = gradient.createShader(rect);
 
     canvas.drawCircle(center, radius, paint);
+  }
+
+  /// Draw atmospheric gradient and horizon line
+  void _drawAtmosphere(Canvas canvas, Size size) {
+    const baseAltitudeFov = 150.0;
+    final altFov = baseAltitudeFov * altitudeFovScale;
+
+    // Horizon line at altitude 0 degrees
+    final double horizonY =
+        size.height / 2 - ((0.0 - state.pitch) / altFov) * size.height;
+
+    // Color scheme based on night vision mode
+    final bool isNightVision = nightVisionMode;
+    final Color horizonColor = isNightVision
+        ? const Color(0xFF3A0000) // dark red
+        : const Color(0xFF1A3A5C); // blue
+    final Color midColor = isNightVision
+        ? const Color(0xFF1A0000) // very dark red
+        : const Color(0xFF0D1F35); // dark blue
+    final Color deepColor = isNightVision
+        ? const Color(0xFF0F0F0F) // almost black with red tint
+        : const Color(0xFF050D18); // very dark blue
+
+    // Atmospheric gradient below horizon
+    final double gradientHeight = size.height * 0.35;
+    final double gradientTop = horizonY;
+    final double gradientBottom = horizonY + gradientHeight;
+
+    if (gradientBottom > 0 && gradientTop < size.height) {
+      final rect = Rect.fromLTRB(
+        0,
+        gradientTop.clamp(0, size.height),
+        size.width,
+        gradientBottom.clamp(0, size.height),
+      );
+
+      final gradient = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          horizonColor.withOpacity(0.85),
+          midColor.withOpacity(0.70),
+          deepColor.withOpacity(0.50),
+          Colors.black.withOpacity(0.0),
+        ],
+        stops: const [0.0, 0.3, 0.6, 1.0],
+      ).createShader(rect);
+
+      canvas.drawRect(rect, Paint()..shader = gradient);
+    }
+
+    // Light glow above horizon
+    if (horizonY > 0 && horizonY < size.height) {
+      final glowRect = Rect.fromLTRB(
+        0,
+        (horizonY - 30).clamp(0, size.height),
+        size.width,
+        horizonY.clamp(0, size.height),
+      );
+
+      final glowColor = isNightVision
+          ? const Color(0xFF5A2A2A) // reddish glow
+          : const Color(0xFF2A5F8F); // blue glow
+
+      final glowGradient = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [glowColor.withOpacity(0.6), Colors.transparent],
+      ).createShader(glowRect);
+
+      canvas.drawRect(glowRect, Paint()..shader = glowGradient);
+    }
+
+    // Horizon line
+    if (horizonY >= 0 && horizonY <= size.height) {
+      final lineColor = isNightVision
+          ? const Color(0xFF8A4A4A)
+          : const Color(0xFF4A90C8);
+
+      canvas.drawLine(
+        Offset(0, horizonY),
+        Offset(size.width, horizonY),
+        Paint()
+          ..color = lineColor.withOpacity(0.5)
+          ..strokeWidth = 1.0,
+      );
+    }
   }
 
   /// Scale normalized coordinates (-1 to 1) to screen coordinates.
