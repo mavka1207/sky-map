@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:sky_map/models/models.dart';
+import 'package:sky_map/models/sky_calculator.dart';
 
 class SkyPainter extends CustomPainter {
   final List<RenderedObject> objects;
@@ -116,33 +117,6 @@ class SkyPainter extends CustomPainter {
     }
   }
 
-  /// Project star from azimuth/altitude to screen coordinates with FOV scaling.
-  /// FOV-scale affects the angular width of the visible sky.
-  Offset? _projectStar(double az, double alt, Size size) {
-    // Get effective FOV (scaled by pinch-zoom)
-    const baseAzimuthFov = 260.0;
-    const baseAltitudeFov = 150.0;
-    final fovAz = baseAzimuthFov * azimuthFovScale;
-    final fovAlt = baseAltitudeFov * altitudeFovScale;
-
-    // Calculate relative azimuth/altitude from device heading/pitch
-    final relAz = (az - state.heading + 360) % 360;
-    final relAlt = alt - state.pitch;
-
-    // Projection: map FOV range to screen coordinates
-    // x: azimuth (0-360 degrees -> array width)
-    // y: altitude (-90 to +90 degrees -> screen height)
-    final x = (relAz / fovAz + 0.5) * size.width;
-    final y = size.height / 2 - (relAlt / fovAlt) * (size.height / 2);
-
-    // Check if within visible bounds (with some margin)
-    const margin = 50.0;
-    if (x < -margin || x > size.width + margin) return null;
-    if (y < -margin || y > size.height + margin) return null;
-
-    return Offset(x, y);
-  }
-
   /// Draw constellation lines with projections recalculated every frame.
   /// Includes wrap-around check to avoid long lines across screen.
   void _drawConstellations(Canvas canvas, Size size) {
@@ -156,20 +130,41 @@ class SkyPainter extends CustomPainter {
 
     final starPaint = Paint()..color = Colors.white;
 
+    const baseAzimuthFov = 260.0;
+    const baseAltitudeFov = 150.0;
+
     for (final constellation in constellations) {
       // Project all stars for this constellation
-      final positions = <Offset>[];
+      final positions = <Offset?>[];
       final relAzimuths = <double>[];
 
       for (final star in constellation.stars) {
-        final pos = _projectStar(star.az, star.alt, size);
-        if (pos != null) {
-          positions.add(pos);
-          final relAz = (star.az - state.heading + 360) % 360;
+        // Constellation stars stored as RA/DEC, convert to Az/Alt
+        final horizontal = SkyCalculator.toHorizontal(
+          star.az, // stored as RA
+          star.alt, // stored as DEC
+          state.latitude,
+          state.lstDegrees,
+        );
+
+        final projected = SkyCalculator.projectToScreen(
+          horizontal.$1, // azimuth
+          horizontal.$2, // altitude
+          state.heading,
+          state.pitch,
+          baseAzimuthFov,
+          baseAltitudeFov,
+          azimuthFovScale,
+          altitudeFovScale,
+        );
+
+        positions.add(projected);
+
+        if (projected != null) {
+          final relAz = (horizontal.$1 - state.heading + 540) % 360 - 180;
           relAzimuths.add(relAz);
         } else {
-          positions.add(Offset.zero); // placeholder
-          relAzimuths.add(-1); // invalid marker
+          relAzimuths.add(-999); // invalid marker
         }
       }
 
@@ -179,23 +174,30 @@ class SkyPainter extends CustomPainter {
         final idx2 = connection[1];
 
         if (idx1 >= positions.length || idx2 >= positions.length) continue;
-        if (relAzimuths[idx1] < 0 || relAzimuths[idx2] < 0) continue;
+
+        final p1 = positions[idx1];
+        final p2 = positions[idx2];
+        if (p1 == null || p2 == null) continue;
+        if (relAzimuths[idx1] == -999 || relAzimuths[idx2] == -999) continue;
 
         // Skip lines that wrap around 0°/360° (causes visual artifacts)
         final azDiff = (relAzimuths[idx1] - relAzimuths[idx2]).abs();
         if (azDiff > 180) continue;
 
-        final p1 = positions[idx1];
-        final p2 = positions[idx2];
-        canvas.drawLine(p1, p2, linePaint);
+        // Convert normalized coordinates to screen pixels
+        final s1 = _scale(p1, size);
+        final s2 = _scale(p2, size);
+        canvas.drawLine(s1, s2, linePaint);
       }
 
       // Draw constellation stars
       for (var i = 0; i < positions.length; i++) {
-        if (relAzimuths[i] < 0) continue; // star not visible
         final pos = positions[i];
-        canvas.drawCircle(pos, 3.0, starGlowPaint); // glow
-        canvas.drawCircle(pos, 1.5, starPaint); // star
+        if (pos == null || relAzimuths[i] == -999) continue; // star not visible
+
+        final screenPos = _scale(pos, size);
+        canvas.drawCircle(screenPos, 3.0, starGlowPaint); // glow
+        canvas.drawCircle(screenPos, 1.5, starPaint); // star
       }
     }
   }
