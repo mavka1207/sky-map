@@ -15,23 +15,7 @@
     "color": "E0E0E0",
     "radius": 10.0
   },
-  "bright_stars": [
-    { "id": "star_sirius", "name": "Sirius", "ra": 101.287, "dec": -16.716, "description": "The brightest star in the night sky (Alpha Canis Majoris)." },
-    { "id": "star_canopus", "name": "Canopus", "ra": 95.987, "dec": -52.695, "description": "Second brightest star (Alpha Carinae)." },
-    { "id": "star_arcturus", "name": "Arcturus", "ra": 213.915, "dec": 19.182, "description": "Brightest star in Boötes." },
-    { "id": "star_vega", "name": "Vega", "ra": 279.234, "dec": 38.783, "description": "Zero magnitude star in Lyra." },
-    { "id": "star_capella", "name": "Capella", "ra": 79.172, "dec": 45.998, "description": "Brightest star in Auriga." },
-    { "id": "star_rigel", "name": "Rigel", "ra": 78.634, "dec": -8.201, "description": "Dominant blue supergiant in Orion." },
-    { "id": "star_procyon", "name": "Procyon", "ra": 114.825, "dec": 5.225, "description": "The Little Dog star (Alpha Canis Minoris)." },
-    { "id": "star_betelgeuse", "name": "Betelgeuse", "ra": 88.792, "dec": 7.407, "description": "Famous red supergiant in Orion." },
-    { "id": "star_polaris", "name": "Polaris", "ra": 37.954, "dec": 89.264, "description": "The current North Star (Alpha Ursae Minoris)." },
-    { "id": "star_altair", "name": "Altair", "ra": 297.695, "dec": 8.868, "description": "The eagle's star in Aquila." },
-    { "id": "star_aldebaran", "name": "Aldebaran", "ra": 68.980, "dec": 16.509, "description": "The Eye of Taurus." },
-    { "id": "star_antares", "name": "Antares", "ra": 247.351, "dec": -26.432, "description": "Red supergiant in Scorpius." },
-    { "id": "star_spica", "name": "Spica", "ra": 201.298, "dec": -11.161, "description": "Alpha Virginis." },
-    { "id": "star_pollux", "name": "Pollux", "ra": 116.328, "dec": 28.015, "description": "One of the twins in Gemini." },
-    { "id": "star_deneb", "name": "Deneb", "ra": 310.358, "dec": 45.280, "description": "Distant supergiant in Cygnus." }
-  ],
+
   "planets": [
     { "id": "mercury", "name": "Mercury", "type": "planet", "description": "The smallest and innermost planet.", "color": "9B8B7E", "radius": 6.0 },
     { "id": "venus",   "name": "Venus",   "type": "planet", "description": "Brightest natural object after the Moon.", "color": "FFD700", "radius": 9.0 },

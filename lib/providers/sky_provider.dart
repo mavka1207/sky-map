@@ -69,70 +69,34 @@ class SkyProvider extends ChangeNotifier {
   // Manual Offset
   double _manualAzimuthOffset = 0.0;
   double _manualPitchOffset = 0.0;
-  double _manualTimeOffsetHours = 0.0;
 
   // Animation targets
   double? _targetAzimuthOffset;
   double? _targetPitchOffset;
   final double _lerpSpeed = 0.15;
 
-  double get manualTimeOffsetHours => _manualTimeOffsetHours;
+
 
   // Catalog
   final List<CelestialObject> _catalog = [];
   List<CelestialObject> get catalog => _catalog;
   final List<Constellation> _constellations = [];
 
-  // Search & Guidance
-  CelestialObject? _searchTarget;
-  double? _guidanceAngle;
-  String _riseSetString = "";
 
-  CelestialObject? get searchTarget => _searchTarget;
-  double? get guidanceAngle => _guidanceAngle;
-  String get riseSetString => _riseSetString;
 
   SkyProvider();
 
-  void setTimeOffset(double hours) {
-    _manualTimeOffsetHours = hours;
-    _updateSky();
-    notifyListeners();
-  }
 
-  void setSearchTarget(CelestialObject? object) {
-    _searchTarget = object;
-    notifyListeners();
-  }
 
   void selectObject(CelestialObject? object) {
     _state = _state.copyWith(
       selectedObject: object,
       clearSelectedObject: object == null,
     );
-    _calculateRiseSetForSelected();
     notifyListeners();
   }
 
-  void _calculateRiseSetForSelected() {
-    final selected = _state.selectedObject;
-    if (selected == null) {
-      _riseSetString = "";
-      return;
-    }
 
-    final rs = SkyCalculator.calculateRiseSetLST(
-      selected.ra,
-      selected.dec,
-      _state.latitude,
-    );
-
-    if (rs == null) {
-      _riseSetString = "Circumpolar (Never Sets)";
-    } else {
-      _riseSetString = "Visible today";
-    }
-  }
 
   Future<void> initialize() async {
     _baseJulian = SkyCalculator.calculateJulianDate(DateTime.now().toUtc());
@@ -196,20 +160,7 @@ class SkyProvider extends ChangeNotifier {
         ));
       }
 
-      final stars = data['bright_stars'] as List? ?? [];
-      for (final s in stars) {
-        _catalog.add(CelestialObject(
-          id: s['id']?.toString() ?? 'star',
-          name: s['name']?.toString() ?? 'Star',
-          type: 'star',
-          description: s['description']?.toString() ?? '',
-          ra: (s['ra'] as num?)?.toDouble() ?? 0.0,
-          dec: (s['dec'] as num?)?.toDouble() ?? 0.0,
-          color: Colors.white,
-          displayRadius: 3.0,
-          screenOffset: Offset.zero,
-        ));
-      }
+
     } catch (e) {
       if (kDebugMode) print('Load error: $e');
     }
@@ -293,7 +244,7 @@ class SkyProvider extends ChangeNotifier {
     final azimuth = (orientation.$1 + _manualAzimuthOffset + 360) % 360;
     final pitch = (orientation.$2 + _manualPitchOffset).clamp(-89.0, 89.0);
 
-    final nowUtc = DateTime.now().toUtc().add(Duration(minutes: (_manualTimeOffsetHours * 60).toInt()));
+    final nowUtc = DateTime.now().toUtc();
     _cachedJulian = SkyCalculator.calculateJulianDate(nowUtc);
     _cachedLstDegrees = SkyCalculator.calculateLst(_cachedJulian!, _state.longitude);
 
@@ -326,18 +277,7 @@ class SkyProvider extends ChangeNotifier {
       if ((_targetPitchOffset! - _manualPitchOffset).abs() < 0.1) _targetPitchOffset = null;
     }
 
-    if (_searchTarget != null) {
-      final equatorial = SkyCalculator.getEquatorialForObject(_searchTarget!.name, julian, _baseJulian);
-      final horizontal = SkyCalculator.toHorizontal(equatorial.$1, equatorial.$2, _state.latitude, lst);
-      final projected = SkyCalculator.projectToScreen(horizontal.$1, horizontal.$2, azimuth, pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale, allowBelowHorizon: true);
-      if (projected == null) {
-        _guidanceAngle = atan2(horizontal.$2 - pitch, SkyCalculator.normalizeAngleDiff(azimuth, horizontal.$1)) * 180 / pi;
-      } else {
-        _guidanceAngle = null;
-      }
-    } else {
-      _guidanceAngle = null;
-    }
+
 
     _state = _state.copyWith(
       heading: azimuth, pitch: pitch, visibleObjects: visible,
