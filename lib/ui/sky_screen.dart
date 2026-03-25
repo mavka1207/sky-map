@@ -27,6 +27,8 @@ class SkyScreen extends StatefulWidget {
 
 class _SkyScreenState extends State<SkyScreen> {
   Offset? _lastFocalPoint;
+  double _lastScale = 1.0;
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SkyProvider>();
@@ -153,10 +155,13 @@ class _SkyScreenState extends State<SkyScreen> {
                   },
                   onScaleStart: (details) {
                     _lastFocalPoint = details.localFocalPoint;
+                    _lastScale = 1.0;
                   },
                   onScaleUpdate: (details) {
-                    // 1. Zoom (FOV scale)
-                    provider.updateFovScale(details.scale);
+                    // 1. Zoom (FOV scale) - use delta for smoother feel
+                    final deltaScale = details.scale / _lastScale;
+                    provider.updateFovScale(deltaScale);
+                    _lastScale = details.scale;
 
                     // 2. Pan (Nudge)
                     if (_lastFocalPoint != null) {

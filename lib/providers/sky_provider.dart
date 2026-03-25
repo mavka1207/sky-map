@@ -57,8 +57,8 @@ class SkyProvider extends ChangeNotifier {
   // FOV scaling
   final double baseAzimuthFov = 60.0;
   final double baseAltitudeFov = 130.0;
-  static const double _minFovScale = 0.5;
-  static const double _maxFovScale = 3.0;
+  static const double _minFovScale = 0.005;
+  static const double _maxFovScale = 5.0;
   double azimuthFovScale = 1.0;
   double altitudeFovScale = 1.0;
 
@@ -312,7 +312,14 @@ class SkyProvider extends ChangeNotifier {
     notifyListeners();
   }
   void resetManualPan() { _targetAzimuthOffset = _targetPitchOffset = null; _manualAzimuthOffset = _manualPitchOffset = 0.0; notifyListeners(); }
-  void updateFovScale(double d) { azimuthFovScale = (azimuthFovScale / d).clamp(_minFovScale, _maxFovScale); altitudeFovScale = azimuthFovScale; notifyListeners(); }
+  void updateFovScale(double d) {
+    // Sensitivity damping: at very high zoom, d=1.1 is still too much.
+    // We dampen the delta to make it feel more linear/controllable.
+    final damped = 1.0 + (d - 1.0) * 0.4; 
+    azimuthFovScale = (azimuthFovScale / damped).clamp(_minFovScale, _maxFovScale);
+    altitudeFovScale = azimuthFovScale;
+    notifyListeners();
+  }
   void resetFovScale() { azimuthFovScale = altitudeFovScale = 1.0; notifyListeners(); }
 
   void onTap(Offset tap, Size size) {

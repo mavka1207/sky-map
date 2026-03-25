@@ -45,7 +45,15 @@ class SkyPainter extends CustomPainter {
   void _drawObjects(Canvas canvas, Size size) {
     for (final item in objects) {
       final center = _scale(item.offset, size);
-      final radius = item.radius * (item.object.name == selectedObjectName ? 1.2 : 1.0);
+      
+      // Dynamic Scaling: Objects grow as you zoom in
+      final zoomFactor = 1.0 / azimuthFovScale;
+      double radius = item.radius * zoomFactor * (item.object.name == selectedObjectName ? 1.2 : 1.0);
+      
+      // Star safety cap (stars should stay relatively small)
+      if (item.object.type == 'star') {
+        radius = radius.clamp(0.5, 4.0);
+      }
       final isSelected = selectedObjectName != null && item.object.name == selectedObjectName;
       final baseColor = item.object.color;
 
