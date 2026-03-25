@@ -51,14 +51,13 @@ class SkyPainter extends CustomPainter {
 
       _drawGlow(canvas, center, radius, baseColor);
       if (item.object.type == 'sun') {
-        canvas.drawCircle(center, radius, Paint()..color = Colors.white);
-        _drawGlow(canvas, center, radius * 1.5, Colors.amber);
+        _drawSun(canvas, center, radius);
       } else if (item.object.type == 'moon') {
         _drawMoon(canvas, center, radius, baseColor, item.moonPhase ?? 0.0);
       } else if (item.object.type == 'star') {
         canvas.drawCircle(center, radius, Paint()..color = Colors.white);
       } else {
-        _drawPlanet(canvas, center, radius, baseColor);
+        _drawPlanet(canvas, center, radius, baseColor, id: item.object.id);
       }
 
       if (isSelected) {
@@ -67,22 +66,36 @@ class SkyPainter extends CustomPainter {
 
       final isMajor = item.object.type == 'planet' || item.object.type == 'sun' || item.object.type == 'moon' || item.object.type == 'star';
       if (isSelected || isMajor) {
+        final isSun = item.object.type == 'sun';
+        final isPlanet = item.object.type == 'planet';
+        final isSpecial = isSun || isPlanet;
+
         final tp = TextPainter(
           text: TextSpan(
             text: item.object.name,
             style: TextStyle(
-              color: isSelected ? Colors.amber : Colors.white.withOpacity(0.9),
+              color: isSelected 
+                ? Colors.amber 
+                : (isPlanet ? Colors.yellowAccent : Colors.white.withOpacity(0.9)),
               fontSize: item.object.type == 'star' ? 10 : 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              decoration: isSpecial ? TextDecoration.underline : null,
+              decorationThickness: 1.5,
+              decorationColor: isPlanet ? Colors.yellowAccent.withOpacity(0.6) : Colors.white.withOpacity(0.6),
               shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
             ),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
 
-        final offset = Offset(radius + 6, -radius - 4 - tp.height);
+        final offset = isSpecial
+            ? Offset(-radius - 12 - tp.width, -tp.height / 2)
+            : Offset(radius + 6, -radius - 4 - tp.height);
         final rect = (center + offset) & tp.size;
-        canvas.drawRRect(RRect.fromRectAndRadius(rect.inflate(4), const Radius.circular(4)), Paint()..color = Colors.black.withOpacity(0.5));
+
+        if (!isSpecial) {
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.inflate(4), const Radius.circular(4)), Paint()..color = Colors.black.withOpacity(0.5));
+        }
         tp.paint(canvas, rect.topLeft);
       }
     }
@@ -118,8 +131,94 @@ class SkyPainter extends CustomPainter {
     canvas.drawCircle(c, r * 1.8, Paint()..shader = RadialGradient(colors: [col.withOpacity(0.4), col.withOpacity(0.1), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: r * 1.8)));
   }
 
-  void _drawPlanet(Canvas canvas, Offset c, double r, Color col) {
-    canvas.drawCircle(c, r, Paint()..shader = RadialGradient(colors: [col.withOpacity(0.2), col, Colors.white.withOpacity(0.8)], center: const Alignment(-0.4, -0.4)).createShader(Rect.fromCircle(center: c, radius: r)));
+  void _drawSun(Canvas canvas, Offset c, double r) {
+    // 1. Large soft halo
+    final haloPaint = Paint()
+      ..shader = RadialGradient(colors: [
+        Colors.amber.withOpacity(0.35),
+        Colors.amber.withOpacity(0.1),
+        Colors.transparent,
+      ]).createShader(Rect.fromCircle(center: c, radius: r * 4));
+    canvas.drawCircle(c, r * 4, haloPaint);
+
+    // 2. Flare rays
+    final rayPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    for (int i = 0; i < 12; i++) {
+        final angle = (i * 30) * pi / 180;
+        final len = r * (2.5 + (i % 3 == 0 ? 1.5 : 0.5));
+        canvas.drawLine(
+            c + Offset(cos(angle) * r, sin(angle) * r),
+            c + Offset(cos(angle) * len, sin(angle) * len),
+            rayPaint,
+        );
+    }
+
+    // 3. Bright core
+    canvas.drawCircle(c, r, Paint()..color = Colors.white);
+    
+    // 4. Tight corona
+    final coronaPaint = Paint()
+      ..shader = RadialGradient(colors: [
+        Colors.white,
+        Colors.amber.withOpacity(0.8),
+        Colors.transparent,
+      ]).createShader(Rect.fromCircle(center: c, radius: r * 1.4));
+    canvas.drawCircle(c, r * 1.4, coronaPaint);
+  }
+
+  void _drawPlanet(Canvas canvas, Offset c, double r, Color col, {String? id}) {
+    // 1. Draw back half of rings for Saturn
+    if (id == 'saturn') {
+      _drawSaturnRings(canvas, c, r, isFront: false);
+    }
+
+    // 2. 3D Spherical paint with Rim Light for visibility against black sky
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          Colors.white.withOpacity(0.9), // Specular highlight
+          col,                           // Base color
+          col.withOpacity(0.2),          // Deep shadow
+          col.withOpacity(0.4),          // Rim light on shadow side
+        ],
+        stops: const [0.0, 0.4, 0.9, 1.0],
+        center: const Alignment(-0.5, -0.5),
+      ).createShader(Rect.fromCircle(center: c, radius: r));
+    
+    canvas.drawCircle(c, r, paint);
+
+    // 3. Draw front half of rings for Saturn
+    if (id == 'saturn') {
+      _drawSaturnRings(canvas, c, r, isFront: true);
+    }
+  }
+
+  void _drawSaturnRings(Canvas canvas, Offset c, double r, {required bool isFront}) {
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = r * 0.15 // Thinner rings
+      ..shader = SweepGradient(
+        colors: [
+          Colors.white12,
+          Colors.white.withOpacity(0.4),
+          Colors.white12,
+        ],
+      ).createShader(Rect.fromCircle(center: c, radius: r * 2.2));
+
+    // Outer and Inner ring simulator
+    final outerRect = Rect.fromCenter(center: c, width: r * 4.8, height: r * 0.9);
+    final innerRect = Rect.fromCenter(center: c, width: r * 3.8, height: r * 0.7);
+    
+    if (isFront) {
+      canvas.drawArc(outerRect, 0, pi, false, ringPaint);
+      canvas.drawArc(innerRect, 0, pi, false, ringPaint..strokeWidth = r * 0.1);
+    } else {
+      canvas.drawArc(outerRect, pi, pi, false, ringPaint);
+      canvas.drawArc(innerRect, pi, pi, false, ringPaint..strokeWidth = r * 0.1);
+    }
   }
 
   void _drawMoon(Canvas canvas, Offset c, double r, Color col, double ph) {
