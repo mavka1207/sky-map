@@ -121,22 +121,26 @@ class SkyPainter extends CustomPainter {
     );
     for (final c in constellations) {
       final pos = List<Offset?>.filled(c.stars.length, null);
-      final valid = <Offset>[];
+      final labelPoints = <Offset>[];
       for (var i = 0; i < c.stars.length; i++) {
         final h = SkyCalculator.toHorizontal(c.stars[i].ra, c.stars[i].dec, state.latitude, state.lstDegrees);
         final p = SkyCalculator.projectToScreen(h.$1, h.$2, state.heading, state.pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale, clip: false);
         pos[i] = p;
-        if (p != null) valid.add(_scale(p, size));
+        if (p != null) {
+          final scaled = _scale(p, size);
+          // Only use points that are actually on-screen for calculating the label center
+          if (scaled.dx >= 0 && scaled.dx <= size.width && scaled.dy >= 0 && scaled.dy <= size.height) {
+            labelPoints.add(scaled);
+          }
+        }
       }
       for (final conn in c.connections) {
         if (conn[0] < pos.length && conn[1] < pos.length && pos[conn[0]] != null && pos[conn[1]] != null) {
           final p1 = pos[conn[0]]!;
           final p2 = pos[conn[1]]!;
           
-          // Seam Protection: Skip lines that wrap around the 360/0 degree azimuth boundary.
-          // Normalized x distance > 2.0/3.0 of screen width is highly likely a wrap.
           final azFov = baseAzimuthFov * azimuthFovScale;
-          final wrapThreshold = 180 / (azFov / 2); // Normalized distance for 180 degrees
+          final wrapThreshold = 180 / (azFov / 2);
           if ((p1.dx - p2.dx).abs() < wrapThreshold * 0.8) {
             canvas.drawLine(_scale(p1, size), _scale(p2, size), linePaint);
           }
@@ -144,15 +148,14 @@ class SkyPainter extends CustomPainter {
       }
       for (final p in pos) {
         if (p != null) {
-          canvas.drawCircle(
-            _scale(p, size),
-            2.8,
-            Paint()..color = Colors.white.withValues(alpha: 0.7),
-          );
+          final scaled = _scale(p, size);
+          if (scaled.dx >= 0 && scaled.dx <= size.width && scaled.dy >= 0 && scaled.dy <= size.height) {
+            canvas.drawCircle(scaled, 2.8, Paint()..color = Colors.white.withValues(alpha: 0.7));
+          }
         }
       }
-      if (valid.isNotEmpty) {
-        final center = valid.reduce((a, b) => a + b) / valid.length.toDouble();
+      if (labelPoints.isNotEmpty) {
+        final center = labelPoints.reduce((a, b) => a + b) / labelPoints.length.toDouble();
         final tp = TextPainter(text: TextSpan(text: c.name.toUpperCase(), style: nameStyle), textDirection: TextDirection.ltr)..layout();
         tp.paint(canvas, center + const Offset(10, 10));
       }
