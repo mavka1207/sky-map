@@ -226,7 +226,9 @@ class SkyProvider extends ChangeNotifier {
           _updateSky();
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      if (kDebugMode) print('Location error: $e');
+    }
   }
 
   void _listenSensors() {

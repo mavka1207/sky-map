@@ -127,7 +127,6 @@ class SkyCalculator {
     final latRad = latitude * _degToRad;
     final raRad = ra * _degToRad;
     final decRad = dec * _degToRad;
-    final lstRad = lstDegrees * _degToRad;
     final hRad = ((lstDegrees - ra + 360) % 360) * _degToRad;
 
     // Approx mean equatorial horizontal parallax of the Moon.
@@ -246,7 +245,6 @@ class SkyCalculator {
   /// Returns (riseHourLST, setHourLST) in degrees.
   /// If the object never rises or never sets, return null.
   static (double, double)? calculateRiseSetLST(double ra, double dec, double lat) {
-    final raRad = ra * _degToRad;
     final decRad = dec * _degToRad;
     final latRad = lat * _degToRad;
     const h0 = -0.833 * _degToRad; // Standard altitude for horizon

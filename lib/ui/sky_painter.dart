@@ -69,7 +69,7 @@ class SkyPainter extends CustomPainter {
       }
 
       if (isSelected) {
-        canvas.drawCircle(center, radius + 8, Paint()..color = Colors.white.withOpacity(0.5)..style = PaintingStyle.stroke..strokeWidth = 2);
+        canvas.drawCircle(center, radius + 8, Paint()..color = Colors.white.withValues(alpha: 0.5)..style = PaintingStyle.stroke..strokeWidth = 2);
       }
 
       final isMajor = item.object.type == 'planet' || item.object.type == 'sun' || item.object.type == 'moon' || item.object.type == 'star';
@@ -84,12 +84,12 @@ class SkyPainter extends CustomPainter {
             style: TextStyle(
               color: isSelected 
                 ? Colors.amber 
-                : (isPlanet ? Colors.yellowAccent : Colors.white.withOpacity(0.9)),
+                : (isPlanet ? Colors.yellowAccent : Colors.white.withValues(alpha: 0.9)),
               fontSize: item.object.type == 'star' ? 10 : 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               decoration: isSpecial ? TextDecoration.underline : null,
               decorationThickness: 1.5,
-              decorationColor: isPlanet ? Colors.yellowAccent.withOpacity(0.6) : Colors.white.withOpacity(0.6),
+              decorationColor: isPlanet ? Colors.yellowAccent.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.6),
               shadows: const [Shadow(color: Colors.black, blurRadius: 4)],
             ),
           ),
@@ -102,7 +102,7 @@ class SkyPainter extends CustomPainter {
         final rect = (center + offset) & tp.size;
 
         if (!isSpecial) {
-          canvas.drawRRect(RRect.fromRectAndRadius(rect.inflate(4), const Radius.circular(4)), Paint()..color = Colors.black.withOpacity(0.5));
+          canvas.drawRRect(RRect.fromRectAndRadius(rect.inflate(4), const Radius.circular(4)), Paint()..color = Colors.black.withValues(alpha: 0.5));
         }
         tp.paint(canvas, rect.topLeft);
       }
@@ -111,10 +111,10 @@ class SkyPainter extends CustomPainter {
 
   void _drawConstellations(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = Colors.white.withOpacity(0.25)
+      ..color = Colors.white.withValues(alpha: 0.25)
       ..strokeWidth = 1.6;
     final nameStyle = TextStyle(
-      color: Colors.white.withOpacity(0.4),
+      color: Colors.white.withValues(alpha: 0.4),
       fontSize: 11,
       letterSpacing: 1.8,
       fontWeight: FontWeight.w300,
@@ -147,7 +147,7 @@ class SkyPainter extends CustomPainter {
           canvas.drawCircle(
             _scale(p, size),
             2.8,
-            Paint()..color = Colors.white.withOpacity(0.7),
+            Paint()..color = Colors.white.withValues(alpha: 0.7),
           );
         }
       }
@@ -160,22 +160,22 @@ class SkyPainter extends CustomPainter {
   }
 
   void _drawGlow(Canvas canvas, Offset c, double r, Color col) {
-    canvas.drawCircle(c, r * 1.8, Paint()..shader = RadialGradient(colors: [col.withOpacity(0.4), col.withOpacity(0.1), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: r * 1.8)));
+    canvas.drawCircle(c, r * 1.8, Paint()..shader = RadialGradient(colors: [col.withValues(alpha: 0.4), col.withValues(alpha: 0.1), Colors.transparent]).createShader(Rect.fromCircle(center: c, radius: r * 1.8)));
   }
 
   void _drawSun(Canvas canvas, Offset c, double r) {
     // 1. Large soft halo
     final haloPaint = Paint()
       ..shader = RadialGradient(colors: [
-        Colors.amber.withOpacity(0.35),
-        Colors.amber.withOpacity(0.1),
+        Colors.amber.withValues(alpha: 0.35),
+        Colors.amber.withValues(alpha: 0.1),
         Colors.transparent,
       ]).createShader(Rect.fromCircle(center: c, radius: r * 4));
     canvas.drawCircle(c, r * 4, haloPaint);
 
     // 2. Flare rays
     final rayPaint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeWidth = 1.2
       ..style = PaintingStyle.stroke;
     for (int i = 0; i < 12; i++) {
@@ -195,7 +195,7 @@ class SkyPainter extends CustomPainter {
     final coronaPaint = Paint()
       ..shader = RadialGradient(colors: [
         Colors.white,
-        Colors.amber.withOpacity(0.8),
+        Colors.amber.withValues(alpha: 0.8),
         Colors.transparent,
       ]).createShader(Rect.fromCircle(center: c, radius: r * 1.4));
     canvas.drawCircle(c, r * 1.4, coronaPaint);
@@ -211,10 +211,10 @@ class SkyPainter extends CustomPainter {
     final paint = Paint()
       ..shader = RadialGradient(
         colors: [
-          Colors.white.withOpacity(0.9), // Specular highlight
+          Colors.white.withValues(alpha: 0.9), // Specular highlight
           col,                           // Base color
-          col.withOpacity(0.2),          // Deep shadow
-          col.withOpacity(0.4),          // Rim light on shadow side
+          col.withValues(alpha: 0.2),          // Deep shadow
+          col.withValues(alpha: 0.4),          // Rim light on shadow side
         ],
         stops: const [0.0, 0.4, 0.9, 1.0],
         center: const Alignment(-0.5, -0.5),
@@ -235,7 +235,7 @@ class SkyPainter extends CustomPainter {
       ..shader = SweepGradient(
         colors: [
           Colors.white12,
-          Colors.white.withOpacity(0.4),
+          Colors.white.withValues(alpha: 0.4),
           Colors.white12,
         ],
       ).createShader(Rect.fromCircle(center: c, radius: r * 2.2));
@@ -255,20 +255,31 @@ class SkyPainter extends CustomPainter {
 
   void _drawMoon(Canvas canvas, Offset c, double r, Color col, double ph) {
     canvas.drawCircle(c, r, Paint()..color = const Color(0xFF151515));
-    final litPaint = Paint()..color = Colors.white.withOpacity(0.9);
-    if (ph == 0.5) { canvas.drawCircle(c, r, litPaint); return; }
+    final litPaint = Paint()..color = Colors.white.withValues(alpha: 0.9);
+    if (ph == 0.5) {
+      canvas.drawCircle(c, r, litPaint);
+      return;
+    }
     final rect = Rect.fromCircle(center: c, radius: r);
     final path = Path();
     if (ph < 0.5) {
       path.addArc(rect, -pi / 2, pi);
       final bulge = r * cos(ph * 2 * pi);
       final tRect = Rect.fromLTRB(c.dx - bulge.abs(), c.dy - r, c.dx + bulge.abs(), c.dy + r);
-      if (ph < 0.25) path.addArc(tRect, pi / 2, -pi); else path.addArc(tRect, pi / 2, pi);
+      if (ph < 0.25) {
+        path.addArc(tRect, pi / 2, -pi);
+      } else {
+        path.addArc(tRect, pi / 2, pi);
+      }
     } else {
       path.addArc(rect, pi / 2, pi);
       final bulge = r * cos(ph * 2 * pi);
       final tRect = Rect.fromLTRB(c.dx - bulge.abs(), c.dy - r, c.dx + bulge.abs(), c.dy + r);
-      if (ph < 0.75) path.addArc(tRect, -pi / 2, pi); else path.addArc(tRect, -pi / 2, -pi);
+      if (ph < 0.75) {
+        path.addArc(tRect, -pi / 2, pi);
+      } else {
+        path.addArc(tRect, -pi / 2, -pi);
+      }
     }
     canvas.drawPath(path, litPaint);
   }
@@ -278,9 +289,17 @@ class SkyPainter extends CustomPainter {
     final horizonColor = nightVisionMode ? const Color(0xFF3A0000) : const Color(0xFF1A3A5C);
     if (horizonY < s.height) {
       final rect = Rect.fromLTRB(0, horizonY.clamp(0, s.height), s.width, s.height);
-      canvas.drawRect(rect, Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [horizonColor.withOpacity(0.8), Colors.transparent]).createShader(rect));
+      canvas.drawRect(rect, Paint()..shader = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [horizonColor.withValues(alpha: 0.8), Colors.transparent]).createShader(rect));
     }
-    if (horizonY >= 0 && horizonY <= s.height) canvas.drawLine(Offset(0, horizonY), Offset(s.width, horizonY), Paint()..color = horizonColor.withOpacity(0.5)..strokeWidth = 1);
+    if (horizonY >= 0 && horizonY <= s.height) {
+      canvas.drawLine(
+        Offset(0, horizonY),
+        Offset(s.width, horizonY),
+        Paint()
+          ..color = horizonColor.withValues(alpha: 0.5)
+          ..strokeWidth = 1,
+      );
+    }
   }
 
   Offset _scale(Offset n, Size s) => Offset(s.width / 2 + n.dx * (s.width / 2), s.height / 2 - n.dy * (s.height / 2));
@@ -292,7 +311,7 @@ class SkyPainter extends CustomPainter {
       double rel = (e.key - state.heading + 540) % 360 - 180;
       if (rel.abs() > azFov) continue;
       final x = (rel / azFov + 1) / 2 * s.width;
-      final tp = TextPainter(text: TextSpan(text: e.value, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
+      final tp = TextPainter(text: TextSpan(text: e.value, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.bold)), textDirection: TextDirection.ltr)..layout();
       tp.paint(canvas, Offset(x - tp.width / 2, s.height - 40));
     }
   }

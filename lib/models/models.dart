@@ -90,34 +90,7 @@ class RenderedObject {
   int get hashCode => object.name.hashCode ^ offset.hashCode ^ radius.hashCode;
 }
 
-/// A star from HIP catalog rendered on screen.
-class RenderedStar {
-  final Offset offset;
-  final double radius;
-  final Color color;
-  final double opacity;
 
-  RenderedStar({
-    required this.offset,
-    required this.radius,
-    required this.color,
-    required this.opacity,
-  });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RenderedStar &&
-          runtimeType == other.runtimeType &&
-          offset == other.offset &&
-          radius == other.radius &&
-          color == other.color &&
-          opacity == other.opacity;
-
-  @override
-  int get hashCode =>
-      offset.hashCode ^ radius.hashCode ^ color.hashCode ^ opacity.hashCode;
-}
 
 /// A constellation with its component stars and connections.
 class Constellation {

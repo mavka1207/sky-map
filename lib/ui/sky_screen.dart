@@ -3,13 +3,11 @@
 // ============================================================================
 
 // ignore_for_file: deprecated_member_use
-import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sky_map/providers/sky_provider.dart';
 import 'package:sky_map/ui/sky_painter.dart';
-import 'package:sky_map/models/models.dart';
 
 class SkyScreen extends StatefulWidget {
   final bool nightVisionMode;
@@ -33,23 +31,7 @@ class _SkyScreenState extends State<SkyScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<SkyProvider>();
     final status = provider.statusLine;
-    final allConstellations = provider.constellations;
-    final availableConstellationNames = allConstellations
-        .map((c) => c.name)
-        .toSet()
-        .toList()
-      ..sort();
-    final selectedKey = provider.selectedConstellationKey;
-    final selectedExists = selectedKey != null &&
-        allConstellations.any((c) => c.name == selectedKey || c.id == selectedKey);
-    final visibleConstellations = !provider.showConstellations
-        ? const <Constellation>[]
-        : (selectedExists
-              ? allConstellations
-                    .where((c) => c.name == selectedKey || c.id == selectedKey)
-                    .toList()
-              : allConstellations);
-
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sky Map'),
