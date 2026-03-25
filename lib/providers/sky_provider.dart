@@ -307,7 +307,8 @@ class SkyProvider extends ChangeNotifier {
   void setSelectedConstellation(String? k) { selectedConstellationKey = k; notifyListeners(); }
   void updateManualPan(Offset d) {
     _targetAzimuthOffset = _targetPitchOffset = null;
-    _manualAzimuthOffset += d.dx * (baseAzimuthFov * azimuthFovScale) / 2;
+    // Natural scroll: drag right -> objects move right (azimuth decreases)
+    _manualAzimuthOffset -= d.dx * (baseAzimuthFov * azimuthFovScale) / 2;
     _manualPitchOffset += d.dy * (baseAltitudeFov * altitudeFovScale) / 2;
     notifyListeners();
   }

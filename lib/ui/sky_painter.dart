@@ -110,8 +110,15 @@ class SkyPainter extends CustomPainter {
   }
 
   void _drawConstellations(Canvas canvas, Size size) {
-    final linePaint = Paint()..color = Colors.white.withOpacity(0.15)..strokeWidth = 0.8;
-    final nameStyle = TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 10, letterSpacing: 1.5);
+    final linePaint = Paint()
+      ..color = Colors.white.withOpacity(0.25)
+      ..strokeWidth = 1.6;
+    final nameStyle = TextStyle(
+      color: Colors.white.withOpacity(0.4),
+      fontSize: 11,
+      letterSpacing: 1.8,
+      fontWeight: FontWeight.w300,
+    );
     for (final c in constellations) {
       final pos = List<Offset?>.filled(c.stars.length, null);
       final valid = <Offset>[];
@@ -126,7 +133,15 @@ class SkyPainter extends CustomPainter {
           canvas.drawLine(_scale(pos[conn[0]]!, size), _scale(pos[conn[1]]!, size), linePaint);
         }
       }
-      for (final p in pos) if (p != null) canvas.drawCircle(_scale(p, size), 1.5, Paint()..color = Colors.white.withOpacity(0.5));
+      for (final p in pos) {
+        if (p != null) {
+          canvas.drawCircle(
+            _scale(p, size),
+            2.8,
+            Paint()..color = Colors.white.withOpacity(0.7),
+          );
+        }
+      }
       if (valid.isNotEmpty) {
         final center = valid.reduce((a, b) => a + b) / valid.length.toDouble();
         final tp = TextPainter(text: TextSpan(text: c.name.toUpperCase(), style: nameStyle), textDirection: TextDirection.ltr)..layout();
