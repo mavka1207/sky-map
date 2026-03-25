@@ -13,7 +13,6 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:convert';
 
-import 'package:sky_map/models/hip_star_catalog.dart';
 import 'package:sky_map/models/models.dart';
 import 'package:sky_map/models/sky_calculator.dart';
 
@@ -24,15 +23,15 @@ class SkyProvider extends ChangeNotifier {
     heading: 0,
     pitch: 0,
     visibleObjects: [],
-    visibleHipStars: [],
     dateTimeUtc: DateTime.now().toUtc(),
     julianDate: 0,
     lstDegrees: 0,
   );
 
   SkyState get state => _state;
-
   List<Constellation> get constellations => _constellations;
+  List<RenderedObject> get visibleObjects => _state.visibleObjects;
+  List<Constellation> get visibleConstellations => _constellations;
 
   // Sensors
   StreamSubscription<AccelerometerEvent>? _accelSub;
@@ -50,168 +49,207 @@ class SkyProvider extends ChangeNotifier {
   double _smoothPitch = 0;
   bool _hasOrientationSeed = false;
 
-  // Caching for performance
+  // Caching
   double? _cachedJulian;
   double? _cachedLstDegrees;
-  DateTime? _lastTimeUpdateUtc;
-  Position? _lastPositionForTimeUpdate;
   late final double _baseJulian;
 
-  // FOV scaling (with zoom constraints)
-  final double baseAzimuthFov = 260.0;
-  final double baseAltitudeFov = 150.0;
-  static const double _minFovScale = 0.5; // Max zoom in
-  static const double _maxFovScale = 3.0; // Max zoom out
+  // FOV scaling
+  final double baseAzimuthFov = 60.0;
+  final double baseAltitudeFov = 130.0;
+  static const double _minFovScale = 0.5;
+  static const double _maxFovScale = 3.0;
   double azimuthFovScale = 1.0;
   double altitudeFovScale = 1.0;
 
   // Settings
-  bool showAllPlanets = true;
   bool showConstellations = true;
   String? selectedConstellationKey;
 
+  // Manual Offset
+  double _manualAzimuthOffset = 0.0;
+  double _manualPitchOffset = 0.0;
+  double _manualTimeOffsetHours = 0.0;
+
+  // Animation targets
+  double? _targetAzimuthOffset;
+  double? _targetPitchOffset;
+  final double _lerpSpeed = 0.15;
+
+  double get manualTimeOffsetHours => _manualTimeOffsetHours;
+
   // Catalog
   final List<CelestialObject> _catalog = [];
+  List<CelestialObject> get catalog => _catalog;
   final List<Constellation> _constellations = [];
+
+  // Search & Guidance
+  CelestialObject? _searchTarget;
+  double? _guidanceAngle;
+  String _riseSetString = "";
+
+  CelestialObject? get searchTarget => _searchTarget;
+  double? get guidanceAngle => _guidanceAngle;
+  String get riseSetString => _riseSetString;
 
   SkyProvider();
 
+  void setTimeOffset(double hours) {
+    _manualTimeOffsetHours = hours;
+    _updateSky();
+    notifyListeners();
+  }
+
+  void setSearchTarget(CelestialObject? object) {
+    _searchTarget = object;
+    notifyListeners();
+  }
+
+  void selectObject(CelestialObject? object) {
+    _state = _state.copyWith(
+      selectedObject: object,
+      clearSelectedObject: object == null,
+    );
+    _calculateRiseSetForSelected();
+    notifyListeners();
+  }
+
+  void _calculateRiseSetForSelected() {
+    final selected = _state.selectedObject;
+    if (selected == null) {
+      _riseSetString = "";
+      return;
+    }
+
+    final rs = SkyCalculator.calculateRiseSetLST(
+      selected.ra,
+      selected.dec,
+      _state.latitude,
+    );
+
+    if (rs == null) {
+      _riseSetString = "Circumpolar (Never Sets)";
+    } else {
+      _riseSetString = "Visible today";
+    }
+  }
+
   Future<void> initialize() async {
     _baseJulian = SkyCalculator.calculateJulianDate(DateTime.now().toUtc());
+    final approxLon = DateTime.now().timeZoneOffset.inMinutes / 4.0;
+    _state = _state.copyWith(latitude: 45.0, longitude: approxLon);
+
     await _loadCelestialObjects();
     await _loadConstellations();
-    await _initLocation();
+    _initLocation();
     _listenSensors();
     _startUpdateTimer();
   }
 
-  /// Load celestial objects (planets, sun, moon) from JSON with Az/Alt coordinates
   Future<void> _loadCelestialObjects() async {
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/celestial_objects.json',
-      );
+      final jsonString = await rootBundle.loadString('assets/celestial_objects.json');
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      // Load Sun
       if (data['sun'] != null) {
-        final sun = data['sun'] as Map<String, dynamic>;
-        _catalog.add(
-          CelestialObject(
-            id: sun['id'] as String? ?? 'sun',
-            name: sun['name'] as String? ?? 'Sun',
-            type: 'sun',
-            description: sun['description'] as String? ?? 'The Sun',
-            az: (sun['az'] as num?)?.toDouble() ?? 0.0,
-            alt: (sun['alt'] as num?)?.toDouble() ?? 0.0,
-            color: _colorFromString(sun['color'] as String? ?? '#FFD700'),
-            displayRadius: (sun['radius'] as num?)?.toDouble() ?? 12.0,
-            // Sun position calculated from ephemeris, no jitter needed
-            screenOffset: Offset.zero,
-          ),
-        );
+        final sun = data['sun'];
+        _catalog.add(CelestialObject(
+          id: sun['id']?.toString() ?? 'sun',
+          name: sun['name']?.toString() ?? 'Sun',
+          type: 'sun',
+          description: sun['description']?.toString() ?? '',
+          ra: (sun['ra'] as num?)?.toDouble() ?? 0.0,
+          dec: (sun['dec'] as num?)?.toDouble() ?? 0.0,
+          color: _colorFromString(sun['color']?.toString() ?? '#FFD700'),
+          displayRadius: (sun['radius'] as num?)?.toDouble() ?? 14.0,
+          screenOffset: Offset.zero,
+        ));
       }
 
-      // Load Moon
       if (data['moon'] != null) {
-        final moon = data['moon'] as Map<String, dynamic>;
-        _catalog.add(
-          CelestialObject(
-            id: moon['id'] as String? ?? 'moon',
-            name: moon['name'] as String? ?? 'Moon',
-            type: 'moon',
-            description: moon['description'] as String? ?? 'The Moon',
-            az: (moon['az'] as num?)?.toDouble() ?? 0.0,
-            alt: (moon['alt'] as num?)?.toDouble() ?? 0.0,
-            color: _colorFromString(moon['color'] as String? ?? '#E0E0E0'),
-            displayRadius: (moon['radius'] as num?)?.toDouble() ?? 8.0,
-            // Moon position calculated from ephemeris, no jitter needed
-            screenOffset: Offset.zero,
-          ),
-        );
+        final moon = data['moon'];
+        _catalog.add(CelestialObject(
+          id: moon['id']?.toString() ?? 'moon',
+          name: moon['name']?.toString() ?? 'Moon',
+          type: 'moon',
+          description: moon['description']?.toString() ?? '',
+          ra: (moon['ra'] as num?)?.toDouble() ?? 0.0,
+          dec: (moon['dec'] as num?)?.toDouble() ?? 0.0,
+          color: _colorFromString(moon['color']?.toString() ?? '#E0E0E0'),
+          displayRadius: (moon['radius'] as num?)?.toDouble() ?? 10.0,
+          screenOffset: Offset.zero,
+        ));
       }
 
-      // Load Planets
-      final planets = data['planets'] as List<dynamic>? ?? [];
+      final planets = data['planets'] as List? ?? [];
       for (final p in planets) {
-        final id = p['id'] as String;
-        _catalog.add(
-          CelestialObject(
-            id: id,
-            name: p['name'] as String? ?? 'Unknown',
-            type: 'planet',
-            description: p['description'] as String? ?? 'A planet',
-            az: (p['az'] as num?)?.toDouble() ?? 0.0,
-            alt: (p['alt'] as num?)?.toDouble() ?? 0.0,
-            color: _colorFromString(p['color'] as String? ?? '#4A90E2'),
-            displayRadius: (p['radius'] as num?)?.toDouble() ?? 10.0,
-            // Planets are calculated from orbital mechanics, no jitter needed
-            screenOffset: Offset.zero,
-          ),
-        );
+        _catalog.add(CelestialObject(
+          id: p['id']?.toString() ?? 'unknown',
+          name: p['name']?.toString() ?? 'Unknown',
+          type: 'planet',
+          description: p['description']?.toString() ?? '',
+          ra: (p['ra'] as num?)?.toDouble() ?? 0.0,
+          dec: (p['dec'] as num?)?.toDouble() ?? 0.0,
+          color: _colorFromString(p['color']?.toString() ?? '#4A90E2'),
+          displayRadius: (p['radius'] as num?)?.toDouble() ?? 10.0,
+          screenOffset: Offset.zero,
+        ));
       }
 
-      if (kDebugMode) print('Loaded ${_catalog.length} celestial objects');
+      final stars = data['bright_stars'] as List? ?? [];
+      for (final s in stars) {
+        _catalog.add(CelestialObject(
+          id: s['id']?.toString() ?? 'star',
+          name: s['name']?.toString() ?? 'Star',
+          type: 'star',
+          description: s['description']?.toString() ?? '',
+          ra: (s['ra'] as num?)?.toDouble() ?? 0.0,
+          dec: (s['dec'] as num?)?.toDouble() ?? 0.0,
+          color: Colors.white,
+          displayRadius: 3.0,
+          screenOffset: Offset.zero,
+        ));
+      }
     } catch (e) {
-      if (kDebugMode) print('Failed to load celestial objects: $e');
+      if (kDebugMode) print('Load error: $e');
     }
   }
 
-  /// Load constellations from JSON with star positions (RA/DEC) and connections
   Future<void> _loadConstellations() async {
     try {
-      final jsonString = await rootBundle.loadString(
-        'assets/celestial_objects.json',
-      );
+      final jsonString = await rootBundle.loadString('assets/celestial_objects.json');
       final data = jsonDecode(jsonString) as Map<String, dynamic>;
+      final constellationsData = data['constellations'] as List? ?? [];
 
-      final constellationsData = data['constellations'] as List<dynamic>? ?? [];
       for (final c in constellationsData) {
-        final id = c['id'] as String;
-        final name = c['name'] as String;
-        final desc = c['description'] as String;
-
-        final starsJson = c['stars'] as List<dynamic>? ?? [];
         final stars = <CelestialObject>[];
-
-        for (var s in starsJson) {
-          // Stars in JSON have RA/DEC (not Az/Alt)
-          // Store them in az/alt fields; projection will convert to Az/Alt
-          stars.add(
-            CelestialObject(
-              id: '${id}_${s['name']}',
-              name: s['name'] as String,
-              type: 'star',
-              description: desc,
-              az: (s['ra'] as num).toDouble(), // RA (0-360 degrees)
-              alt: (s['dec'] as num).toDouble(), // DEC (-90 to +90 degrees)
-              color: const Color(0xFFFFFFFF),
-              displayRadius: 2.5,
-              screenOffset: Offset.zero,
-            ),
-          );
+        for (var s in (c['stars'] as List? ?? [])) {
+          stars.add(CelestialObject(
+            id: '${c['id']}_${s['name']}',
+            name: s['name']?.toString() ?? 'Star',
+            type: 'star',
+            description: c['description']?.toString() ?? '',
+            ra: (s['ra'] as num?)?.toDouble() ?? 0.0,
+            dec: (s['dec'] as num?)?.toDouble() ?? 0.0,
+            color: Colors.white,
+            displayRadius: 2.5,
+            screenOffset: Offset.zero,
+          ));
         }
-
-        final connections = <List<int>>[];
-        final connectionsJson = c['connections'] as List<dynamic>? ?? [];
-        for (var pair in connectionsJson) {
-          connections.add([(pair[0] as num).toInt(), (pair[1] as num).toInt()]);
+        final conns = <List<int>>[];
+        for (var p in (c['connections'] as List? ?? [])) {
+          conns.add([(p[0] as num).toInt(), (p[1] as num).toInt()]);
         }
-
-        _constellations.add(
-          Constellation(
-            id: id,
-            name: name,
-            description: desc,
-            stars: stars,
-            connections: connections,
-          ),
-        );
+        _constellations.add(Constellation(
+          id: c['id'],
+          name: c['name'],
+          description: c['description'],
+          stars: stars,
+          connections: conns,
+        ));
       }
-
-      if (kDebugMode) print('Loaded ${_constellations.length} constellations');
     } catch (e) {
-      if (kDebugMode) print('Failed to load constellations: $e');
+      if (kDebugMode) print('Constellation error: $e');
     }
   }
 
@@ -225,334 +263,154 @@ class SkyProvider extends ChangeNotifier {
   Future<void> _initLocation() async {
     try {
       LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-        _state = _state.copyWith(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
-        notifyListeners();
-
+      if (permission == LocationPermission.denied) permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          _state = _state.copyWith(latitude: last.latitude, longitude: last.longitude);
+          _updateSky();
+        }
         _posSub = Geolocator.getPositionStream().listen((pos) {
-          _state = _state.copyWith(
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-          );
+          _state = _state.copyWith(latitude: pos.latitude, longitude: pos.longitude);
           _updateSky();
         });
       }
-    } catch (e) {
-      if (kDebugMode) print('Location error: $e');
-    }
+    } catch (e) {}
   }
 
   void _listenSensors() {
-    _accelSub = accelerometerEventStream().listen((event) {
-      _accelerometerEvent = event;
-    });
-
-    _magSub = magnetometerEventStream().listen((event) {
-      _magnetometerEvent = event;
-    });
-
-    _compassSub = FlutterCompass.events?.listen((event) {
-      _headingDegrees = event.heading;
-    });
+    _accelSub = accelerometerEventStream().listen((e) => _accelerometerEvent = e);
+    _magSub = magnetometerEventStream().listen((e) => _magnetometerEvent = e);
+    _compassSub = FlutterCompass.events?.listen((e) => _headingDegrees = e.heading);
   }
 
   void _startUpdateTimer() {
-    _updateTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      _updateSky();
-    });
+    _updateTimer = Timer.periodic(const Duration(milliseconds: 16), (_) => _updateSky());
   }
 
   void _updateSky() {
-    // Allow sky updates even without precise location (use 0.0 as fallback)
-    // Sky rendering works better with any orientation than nothing
-
     final orientation = _estimateOrientation();
-    final azimuth = orientation.$1;
-    final pitch = orientation.$2;
+    final azimuth = (orientation.$1 + _manualAzimuthOffset + 360) % 360;
+    final pitch = (orientation.$2 + _manualPitchOffset).clamp(-89.0, 89.0);
 
-    final nowUtc = DateTime.now().toUtc();
-    final lastPos = _lastPositionForTimeUpdate;
-    final movedInGps = lastPos == null
-        ? true
-        : Geolocator.distanceBetween(
-                lastPos.latitude,
-                lastPos.longitude,
-                _state.latitude,
-                _state.longitude,
-              ) >
-              5.0;
-
-    const maxTimeHoldMs = 30000;
-    final staleByTime =
-        _lastTimeUpdateUtc == null ||
-        nowUtc.difference(_lastTimeUpdateUtc!).inMilliseconds >= maxTimeHoldMs;
-
-    final shouldUpdateTime =
-        _cachedJulian == null ||
-        _cachedLstDegrees == null ||
-        movedInGps ||
-        staleByTime;
-
-    if (shouldUpdateTime) {
-      _lastTimeUpdateUtc = nowUtc;
-      _lastPositionForTimeUpdate = Position(
-        latitude: _state.latitude,
-        longitude: _state.longitude,
-        timestamp: nowUtc,
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
-      );
-      _cachedJulian = SkyCalculator.calculateJulianDate(nowUtc);
-      _cachedLstDegrees = SkyCalculator.calculateLst(
-        _cachedJulian!,
-        _state.longitude,
-      );
-    }
+    final nowUtc = DateTime.now().toUtc().add(Duration(minutes: (_manualTimeOffsetHours * 60).toInt()));
+    _cachedJulian = SkyCalculator.calculateJulianDate(nowUtc);
+    _cachedLstDegrees = SkyCalculator.calculateLst(_cachedJulian!, _state.longitude);
 
     final julian = _cachedJulian!;
-    final lstDegrees = _cachedLstDegrees!;
+    final lst = _cachedLstDegrees!;
+    final visible = <RenderedObject>[];
 
-    final visibleObjects = <RenderedObject>[];
-    final visibleHipStars = <RenderedStar>[];
-
-    // Render celestial objects
-    for (final object in _catalog) {
-      final equatorial = SkyCalculator.getEquatorialForObject(
-        object.name,
-        julian,
-        _baseJulian,
-      );
-      final horizontal = SkyCalculator.toHorizontal(
-        equatorial.$1,
-        equatorial.$2,
-        _state.latitude,
-        lstDegrees,
-      );
-
-      final projected = SkyCalculator.projectToScreen(
-        horizontal.$1,
-        horizontal.$2,
-        azimuth,
-        pitch,
-        baseAzimuthFov,
-        baseAltitudeFov,
-        azimuthFovScale,
-        altitudeFovScale,
-        allowBelowHorizon: showAllPlanets && object.type == 'planet',
-      );
+    for (final obj in _catalog) {
+      final equatorial = SkyCalculator.getEquatorialForObject(obj.name, julian, _baseJulian);
+      final horizontal = obj.name == 'Moon' 
+          ? SkyCalculator.toHorizontalMoonTopocentric(equatorial.$1, equatorial.$2, _state.latitude, lst)
+          : SkyCalculator.toHorizontal(equatorial.$1, equatorial.$2, _state.latitude, lst);
+      final projected = SkyCalculator.projectToScreen(horizontal.$1, horizontal.$2, azimuth, pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale, allowBelowHorizon: true);
 
       if (projected != null) {
-        visibleObjects.add(
-          RenderedObject(
-            object: object,
-            offset: projected,
-            radius: object.displayRadius,
-          ),
-        );
+        visible.add(RenderedObject(
+          object: obj, offset: projected, radius: obj.displayRadius,
+          moonPhase: obj.type == 'moon' ? SkyCalculator.calculateMoonPhase(julian) : null,
+          horizontalAz: horizontal.$1, horizontalAlt: horizontal.$2,
+        ));
       }
     }
 
-    // HIP stars
-    final hipStars = HIPCatalog.getVisibleStars(
-      _state.latitude,
-      lstDegrees,
-      maxMagnitude: 5.5,
-      minAltitude: -5.0,
-    );
-
-    for (final star in hipStars) {
-      final projected = SkyCalculator.projectStar(
-        star.ra,
-        star.dec,
-        _state.latitude,
-        lstDegrees,
-        azimuth,
-        pitch,
-        baseAzimuthFov,
-        baseAltitudeFov,
-        azimuthFovScale,
-        altitudeFovScale,
-      );
-      if (projected == null) continue;
-
-      visibleHipStars.add(
-        RenderedStar(
-          offset: projected,
-          radius: star.getVisualRadius(),
-          color: star.getColorBySpectralClass(),
-          opacity: star.getOpacity(),
-        ),
-      );
+    if (_targetAzimuthOffset != null) {
+      _manualAzimuthOffset = SkyCalculator.lerpAngle(_manualAzimuthOffset, _targetAzimuthOffset!, _lerpSpeed);
+      if (SkyCalculator.normalizeAngleDiff(_manualAzimuthOffset, _targetAzimuthOffset!).abs() < 0.1) _targetAzimuthOffset = null;
+    }
+    if (_targetPitchOffset != null) {
+      _manualPitchOffset += (_targetPitchOffset! - _manualPitchOffset) * _lerpSpeed;
+      if ((_targetPitchOffset! - _manualPitchOffset).abs() < 0.1) _targetPitchOffset = null;
     }
 
-    // Auto-FOV based on planet clustering
-    final planetPoints = visibleObjects
-        .where((o) => o.object.type == 'planet')
-        .map((o) => o.offset)
-        .toList();
-
-    if (planetPoints.length >= 2) {
-      double sum = 0;
-      int cnt = 0;
-      for (var i = 0; i < planetPoints.length; i++) {
-        for (var j = i + 1; j < planetPoints.length; j++) {
-          sum += (planetPoints[i] - planetPoints[j]).distance;
-          cnt++;
-        }
+    if (_searchTarget != null) {
+      final equatorial = SkyCalculator.getEquatorialForObject(_searchTarget!.name, julian, _baseJulian);
+      final horizontal = SkyCalculator.toHorizontal(equatorial.$1, equatorial.$2, _state.latitude, lst);
+      final projected = SkyCalculator.projectToScreen(horizontal.$1, horizontal.$2, azimuth, pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale, allowBelowHorizon: true);
+      if (projected == null) {
+        _guidanceAngle = atan2(horizontal.$2 - pitch, SkyCalculator.normalizeAngleDiff(azimuth, horizontal.$1)) * 180 / pi;
+      } else {
+        _guidanceAngle = null;
       }
-      final avgDist = sum / cnt;
-
-      if (avgDist < 0.12) {
-        azimuthFovScale = 1.2;
-      } else if (avgDist > 0.2) {
-        azimuthFovScale = 1.0;
-      }
+    } else {
+      _guidanceAngle = null;
     }
 
     _state = _state.copyWith(
-      heading: azimuth,
-      pitch: pitch,
-      visibleObjects: visibleObjects,
-      visibleHipStars: visibleHipStars,
-      dateTimeUtc: nowUtc,
-      julianDate: julian,
-      lstDegrees: lstDegrees,
-      fovScale: azimuthFovScale,
+      heading: azimuth, pitch: pitch, visibleObjects: visible,
+      dateTimeUtc: nowUtc, julianDate: julian, lstDegrees: lst,
+      fovScale: azimuthFovScale, moonPhase: SkyCalculator.calculateMoonPhase(julian),
     );
-
     notifyListeners();
   }
 
-  /// Estimate device orientation from accelerometer, magnetometer, and compass.
-  /// All values are in DEGREES (not radians)!
   (double, double) _estimateOrientation() {
     final a = _accelerometerEvent;
     if (a == null) return (_smoothAzimuth, _smoothPitch);
-
-    // PITCH IN DEGREES from accelerometer (not radians!)
     final rawPitch = atan2(-a.x, sqrt(a.y * a.y + a.z * a.z)) * 180 / pi;
-
-    // Get azimuth from compass, or fallback to magnetometer calculation
-    double? azimuth = _headingDegrees;
-    if (azimuth == null && _magnetometerEvent != null) {
-      final m = _magnetometerEvent!;
-      azimuth = (atan2(m.y, m.x) * 180 / pi + 360) % 360;
-    }
-
+    double? azimuth = _headingDegrees ?? (_magnetometerEvent != null ? (atan2(_magnetometerEvent!.y, _magnetometerEvent!.x) * 180 / pi + 360) % 360 : null);
     if (azimuth == null) return (_smoothAzimuth, _smoothPitch);
-
-    // First orientation reading - seed the smoothing filters
     if (!_hasOrientationSeed) {
       _hasOrientationSeed = true;
-      _smoothAzimuth = azimuth;
-      _smoothPitch = rawPitch;
-      return (_smoothAzimuth, _smoothPitch);
+      _smoothAzimuth = azimuth; _smoothPitch = rawPitch;
     }
-
-    // Dead-band + smoothing to reduce jitter without losing responsiveness
     const alpha = 0.06;
-    const deadband = 0.35;
-
-    // Smooth azimuth with deadband
-    final azDiff = SkyCalculator.normalizeAngleDiff(_smoothAzimuth, azimuth);
-    if (azDiff.abs() > deadband) {
-      _smoothAzimuth = SkyCalculator.lerpAngle(_smoothAzimuth, azimuth, alpha);
-    }
-
-    // Smooth pitch with deadband
-    final pitchDiff = rawPitch - _smoothPitch;
-    if (pitchDiff.abs() > deadband) {
-      _smoothPitch = _smoothPitch + pitchDiff * alpha;
-    }
-
+    _smoothAzimuth = SkyCalculator.lerpAngle(_smoothAzimuth, azimuth, alpha);
+    _smoothPitch += (rawPitch - _smoothPitch) * alpha;
     return (_smoothAzimuth, _smoothPitch);
   }
 
-  void setShowAllPlanets(bool value) {
-    showAllPlanets = value;
+  void setShowConstellations(bool v) { showConstellations = v; notifyListeners(); }
+  void setSelectedConstellation(String? k) { selectedConstellationKey = k; notifyListeners(); }
+  void updateManualPan(Offset d) {
+    _targetAzimuthOffset = _targetPitchOffset = null;
+    _manualAzimuthOffset += d.dx * (baseAzimuthFov * azimuthFovScale) / 2;
+    _manualPitchOffset += d.dy * (baseAltitudeFov * altitudeFovScale) / 2;
     notifyListeners();
   }
-
-  void setShowConstellations(bool value) {
-    showConstellations = value;
-    notifyListeners();
-  }
-
-  void setSelectedConstellation(String? key) {
-    selectedConstellationKey = key;
-    notifyListeners();
-  }
-
-  /// Update FOV scale factors via pinch-zoom gesture.
-  /// [scaleFactorDelta] is the change in pinch scale (1.0 = no change).
-  void updateFovScale(double scaleFactorDelta) {
-    // Invert: pinch-in (scale < 1) zooms in (expands view), pinch-out (scale > 1) zooms out
-    final newScale = azimuthFovScale / scaleFactorDelta;
-    azimuthFovScale = newScale.clamp(_minFovScale, _maxFovScale);
-    altitudeFovScale = newScale.clamp(_minFovScale, _maxFovScale);
-    notifyListeners();
-  }
-
-  /// Reset FOV to 1.0 (normal zoom).
-  void resetFovScale() {
-    azimuthFovScale = 1.0;
-    altitudeFovScale = 1.0;
-    notifyListeners();
-  }
-
-  void selectObject(CelestialObject? obj) {
-    _state = _state.copyWith(selectedObject: obj);
-    notifyListeners();
-  }
+  void resetManualPan() { _targetAzimuthOffset = _targetPitchOffset = null; _manualAzimuthOffset = _manualPitchOffset = 0.0; notifyListeners(); }
+  void updateFovScale(double d) { azimuthFovScale = (azimuthFovScale / d).clamp(_minFovScale, _maxFovScale); altitudeFovScale = azimuthFovScale; notifyListeners(); }
+  void resetFovScale() { azimuthFovScale = altitudeFovScale = 1.0; notifyListeners(); }
 
   void onTap(Offset tap, Size size) {
-    const hitRadius = 20.0;
+    const minHit = 22.0; double closest = double.infinity; CelestialObject? best;
     for (final obj in _state.visibleObjects) {
-      final screenPos = _normalize(obj.offset, size);
-      if ((screenPos - tap).distance <= hitRadius) {
-        selectObject(obj.object);
-        return;
+      final dist = (_normalize(obj.offset, size) - tap).distance;
+      if (dist <= max(minHit, obj.radius * 2) && dist < closest) { closest = dist; best = obj.object; }
+    }
+    if (best == null && showConstellations) {
+      for (final c in _constellations) {
+        for (final s in c.stars) {
+          final horizontal = SkyCalculator.toHorizontal(s.ra, s.dec, _state.latitude, _state.lstDegrees);
+          final proj = SkyCalculator.projectToScreen(horizontal.$1, horizontal.$2, _state.heading, _state.pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale);
+          if (proj != null) {
+            final dist = (_normalize(proj, size) - tap).distance;
+            if (dist <= minHit && dist < closest) { closest = dist; best = CelestialObject(id: c.id, name: c.name, type: 'constellation', description: c.description, ra: 0, dec: 0, color: Colors.white, displayRadius: 0, screenOffset: Offset.zero); }
+          }
+        }
       }
     }
-    selectObject(null);
+    selectObject(best);
+    if (best != null) {
+      final rendered = _state.visibleObjects.where((o) => o.object.id == best!.id);
+      if (rendered.isNotEmpty) smoothCenterOn(rendered.first);
+    }
   }
 
-  Offset _normalize(Offset normalized, Size size) {
-    final x = size.width / 2 + normalized.dx * (size.width / 2);
-    final y = size.height / 2 - normalized.dy * (size.height / 2);
-    return Offset(x, y);
+  void smoothCenterOn(RenderedObject rendered) {
+    if (rendered.horizontalAz == null || rendered.horizontalAlt == null) return;
+    final (sensorAz, sensorPitch) = _estimateOrientation();
+    _targetAzimuthOffset = SkyCalculator.normalizeAngleDiff(sensorAz, rendered.horizontalAz!);
+    _targetPitchOffset = rendered.horizontalAlt! - sensorPitch;
+    notifyListeners();
   }
 
-  String get statusLine {
-    final lat = _state.latitude.toStringAsFixed(2);
-    final lon = _state.longitude.toStringAsFixed(2);
-    final azInt = _state.heading.toStringAsFixed(0);
-    final altInt = _state.pitch.toStringAsFixed(0);
-    return 'Lat $lat, Lon $lon · Sun az $azInt°, alt $altInt° · 10 Hz';
-  }
+  Offset _normalize(Offset n, Size s) => Offset(s.width / 2 + n.dx * (s.width / 2), s.height / 2 - n.dy * (s.height / 2));
+  String get statusLine => 'Lat ${_state.latitude.toStringAsFixed(2)}, Lon ${_state.longitude.toStringAsFixed(2)} · ${_state.heading.toStringAsFixed(0)}°, ${_state.pitch.toStringAsFixed(0)}°';
 
   @override
-  void dispose() {
-    _accelSub?.cancel();
-    _magSub?.cancel();
-    _compassSub?.cancel();
-    _posSub?.cancel();
-    _updateTimer?.cancel();
-    super.dispose();
-  }
+  void dispose() { _accelSub?.cancel(); _magSub?.cancel(); _compassSub?.cancel(); _posSub?.cancel(); _updateTimer?.cancel(); super.dispose(); }
 }

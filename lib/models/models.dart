@@ -13,8 +13,8 @@ class CelestialObject {
   final String name;
   final String type; // 'sun', 'moon', 'planet', 'constellation', 'star'
   final String description;
-  final double az; // azimuth in degrees: 0-360
-  final double alt; // altitude in degrees: -90 to +90
+  final double ra; // Right Ascension in degrees
+  final double dec; // Declination in degrees
   final Color color;
   final double displayRadius;
   final Offset screenOffset;
@@ -24,8 +24,8 @@ class CelestialObject {
     required this.name,
     required this.type,
     required this.description,
-    required this.az,
-    required this.alt,
+    required this.ra,
+    required this.dec,
     this.color = const Color(0xFFFFFFFF),
     this.displayRadius = 10.0,
     this.screenOffset = Offset.zero,
@@ -36,8 +36,8 @@ class CelestialObject {
     String? name,
     String? type,
     String? description,
-    double? az,
-    double? alt,
+    double? ra,
+    double? dec,
     Color? color,
     double? displayRadius,
     Offset? screenOffset,
@@ -47,8 +47,8 @@ class CelestialObject {
       name: name ?? this.name,
       type: type ?? this.type,
       description: description ?? this.description,
-      az: az ?? this.az,
-      alt: alt ?? this.alt,
+      ra: ra ?? this.ra,
+      dec: dec ?? this.dec,
       color: color ?? this.color,
       displayRadius: displayRadius ?? this.displayRadius,
       screenOffset: screenOffset ?? this.screenOffset,
@@ -61,6 +61,9 @@ class RenderedObject {
   final CelestialObject object;
   final Offset offset;
   final double radius;
+  final double? moonPhase; // 0.0 to 1.0 (0/1=New, 0.5=Full)
+  final double? horizontalAz; // Real-time calculated azimuth
+  final double? horizontalAlt; // Real-time calculated altitude
 
   String get name => object.name;
   String get description => object.description;
@@ -69,6 +72,9 @@ class RenderedObject {
     required this.object,
     required this.offset,
     required this.radius,
+    this.moonPhase,
+    this.horizontalAz,
+    this.horizontalAlt,
   });
 
   @override
@@ -137,12 +143,12 @@ class SkyState {
   final double heading; // device azimuth in degrees
   final double pitch; // device pitch in degrees
   final List<RenderedObject> visibleObjects;
-  final List<RenderedStar> visibleHipStars;
   final CelestialObject? selectedObject;
   final DateTime dateTimeUtc;
   final double julianDate;
   final double lstDegrees;
   final double fovScale;
+  final double? moonPhase; // Global current moon phase
 
   SkyState({
     required this.latitude,
@@ -150,12 +156,12 @@ class SkyState {
     required this.heading,
     required this.pitch,
     required this.visibleObjects,
-    required this.visibleHipStars,
     this.selectedObject,
     required this.dateTimeUtc,
     required this.julianDate,
     required this.lstDegrees,
     this.fovScale = 1.0,
+    this.moonPhase,
   });
 
   SkyState copyWith({
@@ -164,12 +170,13 @@ class SkyState {
     double? heading,
     double? pitch,
     List<RenderedObject>? visibleObjects,
-    List<RenderedStar>? visibleHipStars,
     CelestialObject? selectedObject,
+    bool clearSelectedObject = false,
     DateTime? dateTimeUtc,
     double? julianDate,
     double? lstDegrees,
     double? fovScale,
+    double? moonPhase,
   }) {
     return SkyState(
       latitude: latitude ?? this.latitude,
@@ -177,12 +184,12 @@ class SkyState {
       heading: heading ?? this.heading,
       pitch: pitch ?? this.pitch,
       visibleObjects: visibleObjects ?? this.visibleObjects,
-      visibleHipStars: visibleHipStars ?? this.visibleHipStars,
-      selectedObject: selectedObject ?? this.selectedObject,
+      selectedObject: clearSelectedObject ? null : (selectedObject ?? this.selectedObject),
       dateTimeUtc: dateTimeUtc ?? this.dateTimeUtc,
       julianDate: julianDate ?? this.julianDate,
       lstDegrees: lstDegrees ?? this.lstDegrees,
       fovScale: fovScale ?? this.fovScale,
+      moonPhase: moonPhase ?? this.moonPhase,
     );
   }
 }

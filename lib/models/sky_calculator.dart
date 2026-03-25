@@ -100,20 +100,62 @@ class SkyCalculator {
     double latitude,
     double lstDegrees,
   ) {
-    final hourAngle = (lstDegrees - ra + 360) % 360;
-    final haRad = hourAngle * _degToRad;
+    final ha = (lstDegrees - ra + 360) % 360;
+    final haRad = ha * _degToRad;
     final decRad = dec * _degToRad;
     final latRad = latitude * _degToRad;
 
-    final altitude = asin(
-      sin(decRad) * sin(latRad) + cos(decRad) * cos(latRad) * cos(haRad),
-    );
+    final sinAlt = (sin(decRad) * sin(latRad) + cos(decRad) * cos(latRad) * cos(haRad)).clamp(-1.0, 1.0);
+    final altitude = asin(sinAlt);
+
     final azimuth = atan2(
       -sin(haRad),
-      tan(decRad) * cos(latRad) - sin(latRad) * cos(haRad),
+      cos(latRad) * tan(decRad) - sin(latRad) * cos(haRad)
     );
 
     return ((azimuth / _degToRad + 360) % 360, altitude / _degToRad);
+  }
+
+  /// Topocentric horizontal coordinates for the Moon.
+  /// Applies observer parallax correction (largest for nearby bodies like Moon).
+  static (double, double) toHorizontalMoonTopocentric(
+    double ra,
+    double dec,
+    double latitude,
+    double lstDegrees,
+  ) {
+    final latRad = latitude * _degToRad;
+    final raRad = ra * _degToRad;
+    final decRad = dec * _degToRad;
+    final lstRad = lstDegrees * _degToRad;
+    final hRad = ((lstDegrees - ra + 360) % 360) * _degToRad;
+
+    // Approx mean equatorial horizontal parallax of the Moon.
+    const moonParallaxDeg = 0.9507;
+    final sinPi = sin(moonParallaxDeg * _degToRad);
+
+    // Geocentric latitude helpers (WGS84 flattening approximation).
+    final u = atan(0.99664719 * tan(latRad));
+    final rhoSinPhiPrime = 0.99664719 * sin(u);
+    final rhoCosPhiPrime = cos(u);
+
+    // Topocentric RA correction (Meeus-style approximation).
+    final deltaAlpha = atan2(
+      -rhoCosPhiPrime * sinPi * sin(hRad),
+      cos(decRad) - rhoCosPhiPrime * sinPi * cos(hRad),
+    );
+
+    final raTopocentric = raRad + deltaAlpha;
+
+    // Topocentric declination.
+    final decTopocentric = atan2(
+      (sin(decRad) - rhoSinPhiPrime * sinPi) * cos(deltaAlpha),
+      cos(decRad) - rhoCosPhiPrime * sinPi * cos(hRad),
+    );
+
+    final raTopDeg = (raTopocentric / _degToRad + 360) % 360;
+    final decTopDeg = decTopocentric / _degToRad;
+    return toHorizontal(raTopDeg, decTopDeg, latitude, lstDegrees);
   }
 
   /// Project sky coordinates to screen normalized coordinates (-1 to 1).
@@ -130,7 +172,8 @@ class SkyCalculator {
     double altitudeFovScale, {
     bool allowBelowHorizon = false,
   }) {
-    if (!allowBelowHorizon && altitude < -5) {
+    // Horizon limit removed to allow viewing objects "below feet" as in professional apps
+    if (!allowBelowHorizon && altitude < -90) {
       return null;
     }
 
@@ -138,13 +181,15 @@ class SkyCalculator {
     final relAlt = altitude - phonePitch;
     final azimuthFov = baseAzimuthFov * azimuthFovScale;
     final altitudeFov = baseAltitudeFov * altitudeFovScale;
+    final halfAzimuthFov = azimuthFov / 2;
+    final halfAltitudeFov = altitudeFov / 2;
 
-    if (relAz.abs() > azimuthFov || relAlt.abs() > altitudeFov) {
+    if (relAz.abs() > halfAzimuthFov || relAlt.abs() > halfAltitudeFov) {
       return null;
     }
 
-    final xNorm = relAz / azimuthFov;
-    final yNorm = relAlt / altitudeFov;
+    final xNorm = relAz / halfAzimuthFov;
+    final yNorm = relAlt / halfAltitudeFov;
     return Offset(xNorm, yNorm);
   }
 
@@ -183,5 +228,39 @@ class SkyCalculator {
   static double lerpAngle(double from, double to, double t) {
     final diff = normalizeAngleDiff(from, to);
     return (from + diff * t + 360) % 360;
+  }
+
+  /// Calculate Moon phase (0.0 to 1.0).
+  /// 0.0 = New Moon, 0.25 = First Quarter, 0.5 = Full Moon, 0.75 = Last Quarter.
+  static double calculateMoonPhase(double julian) {
+    const double referenceJD = 2451550.26;
+    const double synodicMonth = 29.530588853;
+    final phase = (julian - referenceJD) % synodicMonth;
+    return (phase < 0 ? phase + synodicMonth : phase) / synodicMonth;
+  }
+
+  /// Approximate Rise/Set times for a given RA/Dec and Latitude.
+  /// Returns (riseHourLST, setHourLST) in degrees.
+  /// If the object never rises or never sets, return null.
+  static (double, double)? calculateRiseSetLST(double ra, double dec, double lat) {
+    final raRad = ra * _degToRad;
+    final decRad = dec * _degToRad;
+    final latRad = lat * _degToRad;
+    const h0 = -0.833 * _degToRad; // Standard altitude for horizon
+
+    final cosH = (sin(h0) - sin(latRad) * sin(decRad)) / (cos(latRad) * cos(decRad));
+
+    if (cosH > 1) return null; // Never rises
+    if (cosH < -1) return null; // Never sets (circumpolar)
+
+    final h = acos(cosH) / _degToRad;
+    return ((ra - h + 360) % 360, (ra + h + 360) % 360);
+  }
+
+  /// Calculate guidance vector (angle in degrees) for an off-screen object.
+  static double getGuidanceAngle(Offset targetOffset) {
+    // targetOffset is in normalized -1..1 coordinates
+    // screen center is 0,0. y is up (+1), x is right (+1)
+    return atan2(targetOffset.dy, targetOffset.dx) / _degToRad;
   }
 }

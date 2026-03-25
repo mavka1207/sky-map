@@ -15,6 +15,23 @@
     "color": "E0E0E0",
     "radius": 10.0
   },
+  "bright_stars": [
+    { "id": "star_sirius", "name": "Sirius", "ra": 101.287, "dec": -16.716, "description": "The brightest star in the night sky (Alpha Canis Majoris)." },
+    { "id": "star_canopus", "name": "Canopus", "ra": 95.987, "dec": -52.695, "description": "Second brightest star (Alpha Carinae)." },
+    { "id": "star_arcturus", "name": "Arcturus", "ra": 213.915, "dec": 19.182, "description": "Brightest star in Boötes." },
+    { "id": "star_vega", "name": "Vega", "ra": 279.234, "dec": 38.783, "description": "Zero magnitude star in Lyra." },
+    { "id": "star_capella", "name": "Capella", "ra": 79.172, "dec": 45.998, "description": "Brightest star in Auriga." },
+    { "id": "star_rigel", "name": "Rigel", "ra": 78.634, "dec": -8.201, "description": "Dominant blue supergiant in Orion." },
+    { "id": "star_procyon", "name": "Procyon", "ra": 114.825, "dec": 5.225, "description": "The Little Dog star (Alpha Canis Minoris)." },
+    { "id": "star_betelgeuse", "name": "Betelgeuse", "ra": 88.792, "dec": 7.407, "description": "Famous red supergiant in Orion." },
+    { "id": "star_polaris", "name": "Polaris", "ra": 37.954, "dec": 89.264, "description": "The current North Star (Alpha Ursae Minoris)." },
+    { "id": "star_altair", "name": "Altair", "ra": 297.695, "dec": 8.868, "description": "The eagle's star in Aquila." },
+    { "id": "star_aldebaran", "name": "Aldebaran", "ra": 68.980, "dec": 16.509, "description": "The Eye of Taurus." },
+    { "id": "star_antares", "name": "Antares", "ra": 247.351, "dec": -26.432, "description": "Red supergiant in Scorpius." },
+    { "id": "star_spica", "name": "Spica", "ra": 201.298, "dec": -11.161, "description": "Alpha Virginis." },
+    { "id": "star_pollux", "name": "Pollux", "ra": 116.328, "dec": 28.015, "description": "One of the twins in Gemini." },
+    { "id": "star_deneb", "name": "Deneb", "ra": 310.358, "dec": 45.280, "description": "Distant supergiant in Cygnus." }
+  ],
   "planets": [
     { "id": "mercury", "name": "Mercury", "type": "planet", "description": "The smallest and innermost planet.", "color": "9B8B7E", "radius": 6.0 },
     { "id": "venus",   "name": "Venus",   "type": "planet", "description": "Brightest natural object after the Moon.", "color": "FFD700", "radius": 9.0 },
@@ -26,67 +43,78 @@
   ],
   "constellations": [
     {
-      "id": "orion", "name": "Orion",
-      "description": "The Hunter. Contains Betelgeuse and Rigel.",
+      "id": "cygnus", "name": "Cygnus",
+      "description": "The Swan. Contains the bright star Deneb.",
       "stars": [
-        { "name": "Betelgeuse", "ra": 88.793,  "dec": 7.407  },
-        { "name": "Rigel",      "ra": 78.634,  "dec": -8.201 },
-        { "name": "Bellatrix",  "ra": 81.283,  "dec": 6.350  },
-        { "name": "Saiph",      "ra": 85.189,  "dec": -9.670 },
-        { "name": "Alnitak",    "ra": 85.189,  "dec": -1.943 },
-        { "name": "Alnilam",    "ra": 84.053,  "dec": -1.202 },
-        { "name": "Mintaka",    "ra": 83.001,  "dec": -0.300 }
+        { "name": "Deneb",   "ra": 310.358, "dec": 45.280 },
+        { "name": "Sadr",    "ra": 305.557, "dec": 40.257 },
+        { "name": "Gienah",  "ra": 312.143, "dec": 33.912 },
+        { "name": "Albireo", "ra": 292.680, "dec": 27.959 },
+        { "name": "Delta Cyg", "ra": 296.225, "dec": 45.131 }
       ],
-      "connections": [[0,2],[2,6],[6,5],[5,4],[4,3],[2,1],[1,3],[0,4]]
+      "connections": [[0,1],[1,2],[1,3],[1,4]]
     },
     {
-      "id": "ursa_major", "name": "Ursa Major",
-      "description": "The Great Bear, contains the Big Dipper.",
+      "id": "leo", "name": "Leo",
+      "description": "The Lion. Contains bright star Regulus.",
       "stars": [
-        { "name": "Dubhe",   "ra": 165.460, "dec": 61.751 },
-        { "name": "Merak",   "ra": 164.605, "dec": 56.383 },
-        { "name": "Phecda",  "ra": 178.458, "dec": 53.695 },
-        { "name": "Megrez",  "ra": 183.857, "dec": 57.033 },
-        { "name": "Alioth",  "ra": 193.507, "dec": 55.960 },
-        { "name": "Mizar",   "ra": 200.981, "dec": 54.926 },
-        { "name": "Alkaid",  "ra": 206.885, "dec": 49.313 }
+        { "name": "Regulus",  "ra": 152.092, "dec": 11.967 },
+        { "name": "Algieba",  "ra": 154.993, "dec": 19.839 },
+        { "name": "Adhafera", "ra": 152.049, "dec": 23.418 },
+        { "name": "Rasalas",  "ra": 147.234, "dec": 23.750 },
+        { "name": "Zosma",    "ra": 168.527, "dec": 20.523 },
+        { "name": "Denebola", "ra": 177.264, "dec": 14.572 }
       ],
-      "connections": [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]]
+      "connections": [[0,1],[1,2],[2,3],[1,4],[4,5]]
     },
     {
-      "id": "cassiopeia", "name": "Cassiopeia",
-      "description": "The Queen, W-shape constellation.",
+      "id": "gemini", "name": "Gemini",
+      "description": "The Twins. Castor and Pollux.",
       "stars": [
-        { "name": "Schedar",  "ra": 10.127,  "dec": 56.537 },
-        { "name": "Caph",     "ra": 2.295,   "dec": 59.150 },
-        { "name": "Gamma Cas","ra": 14.177,  "dec": 60.717 },
-        { "name": "Ruchbah",  "ra": 21.454,  "dec": 60.235 },
-        { "name": "Segin",    "ra": 28.599,  "dec": 63.670 }
+        { "name": "Pollux", "ra": 116.329, "dec": 28.026 },
+        { "name": "Castor", "ra": 113.650, "dec": 31.888 },
+        { "name": "Alhena", "ra": 99.428,  "dec": 16.399 },
+        { "name": "Mebsuta", "ra": 101.287, "dec": 25.131 },
+        { "name": "Wasat",  "ra": 110.158, "dec": 22.006 }
       ],
-      "connections": [[0,1],[0,2],[2,3],[3,4]]
+      "connections": [[0,4],[4,2],[1,3],[3,4]]
     },
     {
-      "id": "lyra", "name": "Lyra",
-      "description": "The Harp, contains bright star Vega.",
+      "id": "aquila", "name": "Aquila",
+      "description": "The Eagle. Contains bright star Altair.",
       "stars": [
-        { "name": "Vega",        "ra": 279.235, "dec": 38.784 },
-        { "name": "Sheliak",     "ra": 282.520, "dec": 33.363 },
-        { "name": "Sulafat",     "ra": 284.736, "dec": 32.690 },
-        { "name": "Epsilon2 Lyr","ra": 281.085, "dec": 39.623 }
+        { "name": "Altair",  "ra": 297.695, "dec": 8.868 },
+        { "name": "Tarazed", "ra": 296.565, "dec": 10.613 },
+        { "name": "Alshain", "ra": 298.844, "dec": 6.406 },
+        { "name": "Okab",    "ra": 286.425, "dec": 2.918 }
       ],
-      "connections": [[0,1],[1,2],[0,3],[0,2]]
+      "connections": [[0,1],[0,2],[0,3]]
     },
     {
-      "id": "scorpius", "name": "Scorpius",
-      "description": "The Scorpion, summer constellation.",
+      "id": "pegasus", "name": "Pegasus",
+      "description": "The Winged Horse. Features the Great Square.",
       "stars": [
-        { "name": "Antares",  "ra": 247.352, "dec": -26.432 },
-        { "name": "Graffias", "ra": 241.359, "dec": -19.805 },
-        { "name": "Dschubba", "ra": 240.083, "dec": -22.622 },
-        { "name": "Sargas",   "ra": 264.330, "dec": -42.998 },
-        { "name": "Shaula",   "ra": 263.402, "dec": -37.103 }
+        { "name": "Markab",  "ra": 346.190, "dec": 15.205 },
+        { "name": "Scheat",  "ra": 345.944, "dec": 28.082 },
+        { "name": "Algenib", "ra": 3.321,   "dec": 15.183 },
+        { "name": "Enif",    "ra": 326.046, "dec": 9.875 },
+        { "name": "Homam",   "ra": 340.540, "dec": 10.831 }
       ],
-      "connections": [[0,1],[1,2],[0,3],[3,4]]
+      "connections": [[0,1],[0,2],[0,4],[4,3]]
+    },
+    {
+      "id": "ursa_minor", "name": "Ursa Minor",
+      "description": "The Little Bear. Contains Polaris, the North Star.",
+      "stars": [
+        { "name": "Polaris", "ra": 37.95,  "dec": 89.26 },
+        { "name": "Kochab",  "ra": 222.68, "dec": 74.16 },
+        { "name": "Pherkad", "ra": 230.18, "dec": 71.83 },
+        { "name": "Delta UMi", "ra": 262.2, "dec": 86.6 },
+        { "name": "Epsilon UMi", "ra": 251.2, "dec": 82.0 },
+        { "name": "Zeta UMi", "ra": 236.4, "dec": 77.8 },
+        { "name": "Eta UMi", "ra": 232.0, "dec": 75.8 }
+      ],
+      "connections": [[0,3],[3,4],[4,5],[5,6],[6,1],[1,2],[2,5]]
     }
   ]
 }
