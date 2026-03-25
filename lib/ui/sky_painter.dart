@@ -124,13 +124,22 @@ class SkyPainter extends CustomPainter {
       final valid = <Offset>[];
       for (var i = 0; i < c.stars.length; i++) {
         final h = SkyCalculator.toHorizontal(c.stars[i].ra, c.stars[i].dec, state.latitude, state.lstDegrees);
-        final p = SkyCalculator.projectToScreen(h.$1, h.$2, state.heading, state.pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale);
+        final p = SkyCalculator.projectToScreen(h.$1, h.$2, state.heading, state.pitch, baseAzimuthFov, baseAltitudeFov, azimuthFovScale, altitudeFovScale, clip: false);
         pos[i] = p;
         if (p != null) valid.add(_scale(p, size));
       }
       for (final conn in c.connections) {
         if (conn[0] < pos.length && conn[1] < pos.length && pos[conn[0]] != null && pos[conn[1]] != null) {
-          canvas.drawLine(_scale(pos[conn[0]]!, size), _scale(pos[conn[1]]!, size), linePaint);
+          final p1 = pos[conn[0]]!;
+          final p2 = pos[conn[1]]!;
+          
+          // Seam Protection: Skip lines that wrap around the 360/0 degree azimuth boundary.
+          // Normalized x distance > 2.0/3.0 of screen width is highly likely a wrap.
+          final azFov = baseAzimuthFov * azimuthFovScale;
+          final wrapThreshold = 180 / (azFov / 2); // Normalized distance for 180 degrees
+          if ((p1.dx - p2.dx).abs() < wrapThreshold * 0.8) {
+            canvas.drawLine(_scale(p1, size), _scale(p2, size), linePaint);
+          }
         }
       }
       for (final p in pos) {

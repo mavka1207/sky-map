@@ -171,6 +171,7 @@ class SkyCalculator {
     double azimuthFovScale,
     double altitudeFovScale, {
     bool allowBelowHorizon = false,
+    bool clip = true,
   }) {
     // Horizon limit removed to allow viewing objects "below feet" as in professional apps
     if (!allowBelowHorizon && altitude < -90) {
@@ -184,7 +185,7 @@ class SkyCalculator {
     final halfAzimuthFov = azimuthFov / 2;
     final halfAltitudeFov = altitudeFov / 2;
 
-    if (relAz.abs() > halfAzimuthFov || relAlt.abs() > halfAltitudeFov) {
+    if (clip && (relAz.abs() > halfAzimuthFov || relAlt.abs() > halfAltitudeFov)) {
       return null;
     }
 
@@ -204,8 +205,9 @@ class SkyCalculator {
     double baseAzimuthFov,
     double baseAltitudeFov,
     double azimuthFovScale,
-    double altitudeFovScale,
-  ) {
+    double altitudeFovScale, {
+    bool clip = true,
+  }) {
     final horizontal = toHorizontal(ra, dec, lat, lst);
     return projectToScreen(
       horizontal.$1,
@@ -216,6 +218,7 @@ class SkyCalculator {
       baseAltitudeFov,
       azimuthFovScale,
       altitudeFovScale,
+      clip: clip,
     );
   }
 
